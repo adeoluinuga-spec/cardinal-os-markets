@@ -13,7 +13,7 @@ type RouteContext = {
 const nextStatus: Record<string, string> = {
   quote: "awaiting_payment",
   awaiting_payment: "confirmed",
-  confirmed: "production",
+  confirmed: "packaged",
   production: "packaged",
   packaged: "dispatched",
 };

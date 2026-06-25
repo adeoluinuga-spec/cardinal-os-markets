@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { supabase } from "@/lib/supabase";
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const associationSlug = searchParams.get("association") ?? "";
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,6 +51,7 @@ export default function SignupPage() {
         userId: data.user.id,
         fullName,
         businessName,
+        associationSlug,
       }),
     });
 
@@ -135,6 +138,16 @@ export default function SignupPage() {
               />
             </label>
 
+            {associationSlug ? (
+              <label className="block">
+                <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink2">
+                  <Building2 className="h-4 w-4" aria-hidden="true" />
+                  Association
+                </span>
+                <Input value={associationSlug} readOnly />
+              </label>
+            ) : null}
+
             {error ? (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
                 {error}
@@ -158,5 +171,21 @@ export default function SignupPage() {
         </Card>
       </div>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-blue-pale px-4 py-10">
+          <Card className="w-full max-w-md p-6 text-center text-sm font-semibold text-ink2">
+            Loading signup...
+          </Card>
+        </main>
+      }
+    >
+      <SignupForm />
+    </Suspense>
   );
 }

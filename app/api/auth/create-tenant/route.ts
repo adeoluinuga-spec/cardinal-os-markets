@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     userId?: string;
     fullName?: string;
     businessName?: string;
+    associationSlug?: string;
   };
 
   if (!body.userId || !body.fullName || !body.businessName) {
@@ -53,6 +54,28 @@ export async function POST(request: Request) {
       { error: tenantUserError.message },
       { status: 400 },
     );
+  }
+
+  if (body.associationSlug) {
+    const { data: association } = await supabaseAdmin
+      .from("associations")
+      .select("id, name")
+      .eq("slug", body.associationSlug)
+      .maybeSingle();
+
+    if (association) {
+      await supabaseAdmin.from("association_members").upsert(
+        {
+          association_id: association.id,
+          tenant_id: tenant.id,
+        },
+        { onConflict: "association_id,tenant_id" },
+      );
+      await supabaseAdmin
+        .from("tenants")
+        .update({ market_association: association.name })
+        .eq("id", tenant.id);
+    }
   }
 
   return NextResponse.json({ tenant });

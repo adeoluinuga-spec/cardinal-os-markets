@@ -30,27 +30,43 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   }
 
-  const { tenant, user } = await getCurrentUserWithTenant();
-  const supabase = tenant ? await createServerSupabaseClient() : supabaseAdmin;
-  let tenantId = Array.isArray(tenant) ? tenant[0]?.id : tenant?.id;
+  let tenantId: string | undefined;
+  let submittedBy: string | null = null;
+  let supabase = supabaseAdmin;
 
-  if (!tenantId) {
-    if (!body.tracking_token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: publicOrder } = await supabaseAdmin
+  if (body.tracking_token) {
+    const { data: publicOrder, error: publicOrderError } = await supabaseAdmin
       .from("orders")
       .select("id, tenant_id")
       .eq("id", params.id)
       .eq("tracking_token", body.tracking_token)
       .maybeSingle();
 
+    if (publicOrderError) {
+      return NextResponse.json(
+        { error: "Unable to verify order token right now." },
+        { status: 502 },
+      );
+    }
+
     if (!publicOrder) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid order token" },
+        { status: 401 },
+      );
     }
 
     tenantId = publicOrder.tenant_id;
+  } else {
+    const { tenant, user } = await getCurrentUserWithTenant();
+    tenantId = Array.isArray(tenant) ? tenant[0]?.id : tenant?.id;
+
+    if (!tenantId || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    submittedBy = user.id;
+    supabase = await createServerSupabaseClient();
   }
 
   const { data: duplicate } = await supabase
@@ -91,7 +107,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       proof_url: body.proof_url ?? null,
       proof_hash: proofHash,
       status: "pending",
-      submitted_by: user?.id ?? null,
+      submitted_by: submittedBy,
     })
     .select("*")
     .single();

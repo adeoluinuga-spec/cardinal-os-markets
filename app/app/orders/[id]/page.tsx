@@ -57,7 +57,7 @@ type DetailResponse = {
 const nextActions: Record<string, string> = {
   quote: "Request Payment",
   awaiting_payment: "Confirm Order",
-  confirmed: "Move to Production",
+  confirmed: "Mark Packaged",
   production: "Mark Packaged",
   packaged: "Dispatch",
 };

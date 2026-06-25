@@ -80,11 +80,13 @@ export async function POST(request: Request) {
     : "The knowledge base is empty.";
 
   // 3. Ask Claude.
-  let answer =
-    "Claude is not configured (missing ANTHROPIC_API_KEY), so I can't answer right now.";
+  let answer = matches.length
+    ? `Based on "${matches[0].title}": ${matches[0].content}`
+    : "I couldn't find a matching knowledge entry for that question.";
   if (process.env.ANTHROPIC_API_KEY) {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const system = `You are the Company Brain for ${t.name}, a ${t.business_type ?? "trading"} business in ${t.city ?? "Lagos"}. Answer questions using the knowledge base below. Be specific and accurate. If the answer is not in the knowledge base, say so clearly.
+    try {
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const system = `You are the Company Brain for ${t.name}, a ${t.business_type ?? "trading"} business in ${t.city ?? "Lagos"}. Answer questions using the knowledge base below. Be specific and accurate. If the answer is not in the knowledge base, say so clearly.
 
 KNOWLEDGE BASE:
 ${knowledgeBlock}
@@ -92,17 +94,21 @@ ${knowledgeBlock}
 LIVE BUSINESS DATA:
 ${liveContext}`;
 
-    const msg = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      system,
-      messages: [{ role: "user", content: query }],
-    });
-    answer = msg.content
-      .filter((b) => b.type === "text")
-      .map((b) => (b as { text: string }).text)
-      .join("")
-      .trim();
+      const msg = await anthropic.messages.create({
+        model: MODEL,
+        max_tokens: 1024,
+        system,
+        messages: [{ role: "user", content: query }],
+      });
+      const text = msg.content
+        .filter((b) => b.type === "text")
+        .map((b) => (b as { text: string }).text)
+        .join("")
+        .trim();
+      if (text) answer = text;
+    } catch {
+      // Keep the deterministic knowledge-base answer when Claude is unavailable.
+    }
   }
 
   // 4. Persist the exchange and count usage.

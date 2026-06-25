@@ -19,11 +19,16 @@ export async function generateEmbedding(text: string): Promise<string | null> {
     return null;
   }
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const response = await openai.embeddings.create({
-    model: EMBEDDING_MODEL,
-    input,
-  });
+  let response;
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    response = await openai.embeddings.create({
+      model: EMBEDDING_MODEL,
+      input,
+    });
+  } catch {
+    return null;
+  }
 
   const vector = response.data[0]?.embedding;
   if (!vector) {

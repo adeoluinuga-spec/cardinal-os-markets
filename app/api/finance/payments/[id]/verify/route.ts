@@ -87,7 +87,10 @@ export async function POST(request: Request, { params }: RouteContext) {
     balance,
     payment_status: paymentStatus,
   };
-  if (paymentStatus === "paid" && order.status === "awaiting_payment") {
+  if (
+    paymentStatus === "paid" &&
+    (order.status === "quote" || order.status === "awaiting_payment")
+  ) {
     orderUpdate.status = "confirmed";
   }
 
