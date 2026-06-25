@@ -9,6 +9,7 @@ const publicRoutes = [
   "/track",
   "/rider",
   "/association",
+  "/api/webhooks",
 ];
 
 function isPublicRoute(pathname: string) {
@@ -61,7 +62,7 @@ export async function middleware(request: NextRequest) {
 
     const { data: tenantUser } = await supabase
       .from("tenant_users")
-      .select("tenant:tenants(subscription_status, trial_ends_at)")
+      .select("tenant:tenants(subscription_status, trial_ends_at, onboarding_completed)")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .maybeSingle();
@@ -76,6 +77,17 @@ export async function middleware(request: NextRequest) {
     const tenant = Array.isArray(tenantUser?.tenant)
       ? tenantUser?.tenant[0]
       : tenantUser?.tenant;
+
+    if (
+      pathname.startsWith("/app") &&
+      tenant &&
+      tenant.onboarding_completed !== true
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
+
     const trialEndsAt = tenant?.trial_ends_at
       ? new Date(tenant.trial_ends_at)
       : null;
@@ -83,8 +95,11 @@ export async function middleware(request: NextRequest) {
       tenant?.subscription_status === "trial" &&
       trialEndsAt !== null &&
       trialEndsAt.getTime() < Date.now();
+    const isBlockedSubscription =
+      tenant?.subscription_status === "suspended" ||
+      tenant?.subscription_status === "cancelled";
 
-    if (isExpiredTrial) {
+    if (pathname.startsWith("/app") && (isExpiredTrial || isBlockedSubscription)) {
       const url = request.nextUrl.clone();
       url.pathname = "/upgrade";
       return NextResponse.redirect(url);

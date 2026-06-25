@@ -6,6 +6,15 @@ export function DashboardWelcomeToast() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("upgraded") === "true") {
+      setMessage("Welcome back. Your Cardinal OS Markets subscription is active.");
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
+      const timeout = window.setTimeout(() => setMessage(""), 5000);
+      return () => window.clearTimeout(timeout);
+    }
+
     const toast = sessionStorage.getItem("cardinal-welcome-toast");
 
     if (!toast) {

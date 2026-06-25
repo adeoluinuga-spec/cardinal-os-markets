@@ -44,7 +44,13 @@ function getPageTitle(pathname: string) {
   return match?.[1] ?? "Cardinal OS Markets";
 }
 
-export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
+export function TopBar({
+  onMenuClick,
+  hasTrialBanner = false,
+}: {
+  onMenuClick: () => void;
+  hasTrialBanner?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { tenant, role } = useTenant();
@@ -55,7 +61,11 @@ export function TopBar({ onMenuClick }: { onMenuClick: () => void }) {
   const canCreateOrder = Boolean(role && ORDER_CREATOR_ROLES.includes(role));
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-20 flex h-14 items-center justify-between border-b border-blue-border bg-white px-4 md:left-[240px]">
+    <header
+      className={`fixed left-0 right-0 z-20 flex h-14 items-center justify-between border-b border-blue-border bg-white px-4 md:left-[240px] ${
+        hasTrialBanner ? "top-10" : "top-0"
+      }`}
+    >
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"

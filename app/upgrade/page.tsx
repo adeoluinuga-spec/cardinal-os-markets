@@ -1,139 +1,242 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { TIER_NAMES, TIER_PRICES } from "@/lib/tiers";
+import { Spinner } from "@/components/ui/Spinner";
+import { TIER_NAMES, TIER_PRICES, type SubscriptionTier } from "@/lib/tiers";
+
+declare global {
+  interface Window {
+    PaystackPop?: {
+      setup: (options: Record<string, unknown>) => { openIframe: () => void };
+    };
+  }
+}
 
 type PaidTier = "starter" | "growth" | "professional";
 
-const TIERS: PaidTier[] = ["starter", "growth", "professional"];
-
-type Row = {
-  label: string;
-  values: Record<PaidTier, string | boolean>;
+type SubscriptionInfo = {
+  tier: SubscriptionTier;
+  status: string;
+  trial_days_left: number;
+  email: string | null;
+  tenant_id: string;
+  paystack_public_key: string | null;
 };
 
-const ROWS: Row[] = [
-  { label: "Staff", values: { starter: "3", growth: "10", professional: "Unlimited" } },
-  { label: "Customers", values: { starter: "200", growth: "1,000", professional: "Unlimited" } },
-  { label: "Orders / month", values: { starter: "100", growth: "Unlimited", professional: "Unlimited" } },
-  { label: "AI queries", values: { starter: "50 / mo", growth: "Unlimited", professional: "Unlimited" } },
-  { label: "Tasks", values: { starter: false, growth: true, professional: true } },
-  { label: "Autopilot", values: { starter: false, growth: true, professional: true } },
-  { label: "Performance", values: { starter: false, growth: true, professional: true } },
-  { label: "Activity Log", values: { starter: false, growth: false, professional: true } },
-  { label: "SMS Broadcasts", values: { starter: false, growth: true, professional: true } },
-];
+const TIERS: PaidTier[] = ["starter", "growth", "professional"];
 
-function Cell({ value }: { value: string | boolean }) {
-  if (typeof value === "boolean") {
-    return value ? (
-      <Check className="mx-auto h-4 w-4 text-green" aria-label="Included" />
-    ) : (
-      <X className="mx-auto h-4 w-4 text-ink2/40" aria-label="Not included" />
-    );
-  }
-  return <span className="text-sm font-semibold text-ink">{value}</span>;
+const PLAN_COPY: Record<PaidTier, string[]> = {
+  starter: ["Up to 5 staff", "Core modules", "1,000 orders/month"],
+  growth: ["Up to 15 staff", "All modules", "Unlimited orders", "Autopilot"],
+  professional: ["Unlimited staff", "All modules", "API access", "Priority support"],
+};
+
+function naira(amount: number) {
+  return `₦${amount.toLocaleString("en-NG")}`;
 }
 
-function formatNaira(amount: number) {
-  return `₦${(amount / 1000).toLocaleString("en-NG")}k`;
+function loadPaystackScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if (window.PaystackPop) return resolve(true);
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[src="https://js.paystack.co/v1/inline.js"]',
+    );
+    if (existing) {
+      existing.addEventListener("load", () => resolve(true), { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v1/inline.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
+function statusCopy(status: string | null, daysLeft: number) {
+  if (status === "trial") {
+    return daysLeft > 0
+      ? `You are on a free trial. ${daysLeft} day${daysLeft === 1 ? "" : "s"} remaining.`
+      : "Your trial has expired. Choose a plan to continue.";
+  }
+
+  if (status === "suspended") {
+    return "Your subscription is suspended because a payment failed.";
+  }
+
+  if (status === "cancelled") {
+    return "Your subscription has ended. Choose a plan to reactivate.";
+  }
+
+  if (status === "active") {
+    return "Your subscription is active. You can switch plans below.";
+  }
+
+  return "Choose a plan to continue using Cardinal OS Markets.";
 }
 
 export default function UpgradePage() {
+  const router = useRouter();
+  const [info, setInfo] = useState<SubscriptionInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState<PaidTier | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/settings/subscription", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as SubscriptionInfo;
+      })
+      .then((data) => setInfo(data))
+      .finally(() => setLoading(false));
+    void loadPaystackScript();
+  }, []);
+
+  async function verifyPayment(reference: string, tier: PaidTier) {
+    const response = await fetch("/api/subscription/upgrade", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reference, tier }),
+    });
+
+    setProcessing(null);
+
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      setError(data.error ?? "Payment verification failed.");
+      return;
+    }
+
+    router.push("/app/dashboard?upgraded=true");
+  }
+
+  async function selectPlan(tier: PaidTier) {
+    if (!info) {
+      router.push("/login?next=/upgrade");
+      return;
+    }
+
+    setError("");
+    setProcessing(tier);
+    const ready = await loadPaystackScript();
+
+    if (!ready || !window.PaystackPop || !info.paystack_public_key || !info.email) {
+      setProcessing(null);
+      setError("Checkout is not available right now. Please try again shortly.");
+      return;
+    }
+
+    const handler = window.PaystackPop.setup({
+      key: info.paystack_public_key,
+      email: info.email,
+      amount: TIER_PRICES[tier] * 100,
+      currency: "NGN",
+      metadata: {
+        tenant_id: info.tenant_id,
+        tier,
+      },
+      callback: (response: { reference: string }) => {
+        void verifyPayment(response.reference, tier);
+      },
+      onClose: () => setProcessing(null),
+    });
+
+    handler.openIframe();
+  }
+
   return (
     <main className="min-h-screen bg-blue-pale px-4 py-10">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-5xl">
         <div className="text-center">
           <p className="font-mono text-xs font-semibold uppercase tracking-wide text-gold">
             Subscription required
           </p>
-          <h1 className="mt-3 font-display text-3xl font-bold text-ink">
-            Choose your plan
+          <h1 className="mt-3 font-display text-4xl font-bold text-ink">
+            Choose Your Plan
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-ink2">
-            Your free trial included every feature with no limits. Pick a plan
-            below to keep your workspace running — you can upgrade any time.
+            {loading
+              ? "Checking your workspace subscription..."
+              : statusCopy(info?.status ?? null, info?.trial_days_left ?? 0)}
           </p>
         </div>
 
-        <Card className="mt-8 overflow-x-auto p-0">
-          <table className="w-full min-w-[640px] border-collapse text-center">
-            <thead>
-              <tr className="border-b border-blue-border">
-                <th className="px-4 py-4 text-left text-sm font-semibold text-ink2">
-                  Feature
-                </th>
-                {TIERS.map((tier) => (
-                  <th key={tier} className="px-4 py-4">
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="font-display text-base font-bold text-ink">
-                        {TIER_NAMES[tier]}
-                      </span>
-                      {tier === "growth" ? (
-                        <Badge variant="gold">Recommended</Badge>
-                      ) : null}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {ROWS.map((row) => (
-                <tr key={row.label} className="border-b border-blue-border/60">
-                  <td className="px-4 py-3 text-left text-sm font-semibold text-ink2">
-                    {row.label}
-                  </td>
-                  {TIERS.map((tier) => (
-                    <td
-                      key={tier}
-                      className={tier === "growth" ? "bg-blue-pale/60 px-4 py-3" : "px-4 py-3"}
-                    >
-                      <Cell value={row.values[tier]} />
-                    </td>
+        {!loading && !info ? (
+          <Card className="mx-auto mt-8 max-w-lg text-center">
+            <AlertTriangle className="mx-auto h-8 w-8 text-gold" />
+            <h2 className="mt-4 font-display text-2xl font-bold text-ink">
+              Sign in to upgrade
+            </h2>
+            <p className="mt-2 text-sm text-ink2">
+              We need to know which business workspace to upgrade.
+            </p>
+            <Link href="/login?next=/upgrade" className="mt-5 inline-flex">
+              <Button>Sign In</Button>
+            </Link>
+          </Card>
+        ) : null}
+
+        {error ? (
+          <div className="mx-auto mt-6 max-w-2xl rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          {TIERS.map((tier) => {
+            const highlighted = tier === "growth";
+            const current = info?.status === "active" && info.tier === tier;
+
+            return (
+              <Card
+                key={tier}
+                className={highlighted ? "border-2 border-blue-primary" : ""}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="font-display text-2xl font-bold text-ink">
+                    {TIER_NAMES[tier]}
+                  </h2>
+                  {highlighted ? <Badge variant="gold">Recommended</Badge> : null}
+                </div>
+                <p className="mt-3 font-display text-3xl font-bold text-ink">
+                  {naira(TIER_PRICES[tier])}
+                  <span className="text-sm font-semibold text-ink2">/month</span>
+                </p>
+                <ul className="mt-5 space-y-3">
+                  {PLAN_COPY[tier].map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-ink2">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green" />
+                      {item}
+                    </li>
                   ))}
-                </tr>
-              ))}
-              <tr>
-                <td className="px-4 py-4 text-left text-sm font-semibold text-ink2">
-                  Price
-                </td>
-                {TIERS.map((tier) => (
-                  <td
-                    key={tier}
-                    className={tier === "growth" ? "bg-blue-pale/60 px-4 py-4" : "px-4 py-4"}
-                  >
-                    <span className="font-display text-lg font-bold text-ink">
-                      {formatNaira(TIER_PRICES[tier])}
-                    </span>
-                    <span className="block text-xs text-ink2">/month</span>
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </Card>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          {TIERS.map((tier) => (
-            <Button
-              key={tier}
-              variant={tier === "growth" ? "primary" : "ghost"}
-              className={tier === "growth" ? "" : "border border-blue-border bg-white"}
-            >
-              Choose {TIER_NAMES[tier]}
-            </Button>
-          ))}
+                </ul>
+                <Button
+                  className={highlighted ? "mt-6 w-full" : "mt-6 w-full border border-blue-border bg-white"}
+                  variant={highlighted ? "primary" : "ghost"}
+                  disabled={processing !== null || current}
+                  onClick={() => selectPlan(tier)}
+                >
+                  {processing === tier ? (
+                    <Spinner className="h-4 w-4" />
+                  ) : current ? (
+                    "Current Plan"
+                  ) : (
+                    "Select Plan"
+                  )}
+                </Button>
+              </Card>
+            );
+          })}
         </div>
-
-        <p className="mt-6 text-center text-xs text-ink2">
-          Need help choosing?{" "}
-          <Link href="/app/settings" className="font-semibold text-blue-primary hover:underline">
-            View your current usage
-          </Link>
-          .
-        </p>
       </div>
     </main>
   );
