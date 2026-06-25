@@ -56,10 +56,10 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     },
   },
   starter: {
-    max_staff: 3,
+    max_staff: 5,
     max_customers: 200,
     max_products: 50,
-    max_orders_per_month: 100,
+    max_orders_per_month: 1000,
     max_knowledge_entries: 20,
     max_ai_queries_per_month: 50,
     features: {
@@ -79,7 +79,7 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     },
   },
   growth: {
-    max_staff: 10,
+    max_staff: 15,
     max_customers: 1000,
     max_products: 200,
     max_orders_per_month: -1,

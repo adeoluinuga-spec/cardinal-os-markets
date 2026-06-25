@@ -9,7 +9,6 @@ import { Spinner } from "@/components/ui/Spinner";
 import { UsageMeters } from "@/components/settings/UsageMeters";
 import { useTenant } from "@/context/TenantContext";
 import {
-  TIER_LIMITS,
   TIER_NAMES,
   TIER_PRICES,
   normalizeTier,
@@ -45,11 +44,11 @@ const PAID_TIERS: ("starter" | "growth" | "professional")[] = [
 const TRIAL_LENGTH_DAYS = 14;
 
 function naira(amount: number) {
-  return `₦${amount.toLocaleString("en-NG")}`;
+  return `â‚¦${amount.toLocaleString("en-NG")}`;
 }
 
 function formatDate(value: string | null) {
-  if (!value) return "—";
+  if (!value) return "â€”";
   return new Date(value).toLocaleDateString("en-NG", {
     day: "numeric",
     month: "long",
@@ -58,24 +57,15 @@ function formatDate(value: string | null) {
 }
 
 function planBullets(tier: "starter" | "growth" | "professional") {
-  const limits = TIER_LIMITS[tier];
-  const staff =
-    limits.max_staff === -1 ? "Unlimited staff" : `Up to ${limits.max_staff} staff`;
-  const orders =
-    limits.max_orders_per_month === -1
-      ? "Unlimited orders/month"
-      : `${limits.max_orders_per_month.toLocaleString("en-NG")} orders/month`;
-  const ai =
-    limits.max_ai_queries_per_month === -1
-      ? "Unlimited AI queries"
-      : `${limits.max_ai_queries_per_month} AI queries/month`;
-  const extra =
-    tier === "professional"
-      ? "All modules · Priority support"
-      : limits.features.autopilot_inbox
-        ? "All core modules · Autopilot"
-        : "Core modules";
-  return [staff, orders, ai, extra];
+  if (tier === "starter") {
+    return ["Up to 5 staff", "Core modules", "1,000 orders/month"];
+  }
+
+  if (tier === "growth") {
+    return ["Up to 15 staff", "All modules", "Unlimited orders", "Autopilot"];
+  }
+
+  return ["Unlimited staff", "All modules", "API access", "Priority support"];
 }
 
 function loadPaystackScript(): Promise<boolean> {
@@ -209,7 +199,7 @@ export function SubscriptionTab({ onToast }: { onToast: (m: string) => void }) {
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-green" aria-hidden="true" />
             <p className="font-semibold text-ink">
-              {TIER_NAMES[tier]} plan · Active
+              {TIER_NAMES[tier]} plan Â· Active
             </p>
           </div>
           <p className="mt-2 font-display text-2xl font-bold text-ink">

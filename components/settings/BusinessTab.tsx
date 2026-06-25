@@ -44,7 +44,7 @@ const EMPTY: Form = {
   phone: "",
   address: "",
   city: "",
-  ai_persona_name: "",
+  ai_persona_name: "Cardinal",
   logo_url: "",
 };
 
@@ -69,7 +69,7 @@ export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
             phone: b.phone ?? "",
             address: b.address ?? "",
             city: b.city ?? "",
-            ai_persona_name: b.ai_persona_name ?? "",
+            ai_persona_name: b.ai_persona_name ?? "Cardinal",
             logo_url: b.logo_url ?? "",
           });
         }

@@ -66,6 +66,13 @@ export async function middleware(request: NextRequest) {
       .eq("is_active", true)
       .maybeSingle();
 
+    if (pathname.startsWith("/app") && !tenantUser) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("inactive", "1");
+      return NextResponse.redirect(url);
+    }
+
     const tenant = Array.isArray(tenantUser?.tenant)
       ? tenantUser?.tenant[0]
       : tenantUser?.tenant;
@@ -85,6 +92,17 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && (pathname === "/login" || pathname === "/signup")) {
+    const { data: tenantUser } = await supabase
+      .from("tenant_users")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!tenantUser) {
+      return response;
+    }
+
     const url = request.nextUrl.clone();
     url.pathname = "/app/dashboard";
     return NextResponse.redirect(url);
