@@ -237,11 +237,11 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "flex h-screen w-[240px] flex-col bg-blue-dark text-white",
+        "flex h-screen w-[240px] flex-col bg-blue-dark text-white shadow-2xl shadow-blue-dark/20",
         mobile ? "w-full" : "fixed left-0 top-0 z-30 hidden md:flex",
       )}
     >
-      <div className="border-b border-white/10 p-4">
+      <div className="border-b border-white/10 px-5 py-5">
         <div className="flex items-center gap-3">
           {tenant?.logo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -251,16 +251,19 @@ export function Sidebar({
               className="h-8 w-8 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white font-bold text-blue-dark">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white font-display text-base font-bold text-blue-dark">
               {businessInitial}
             </div>
           )}
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-white">
+            <p className="truncate font-display text-lg font-bold leading-none text-white">
               {tenant?.name ?? "Cardinal OS Markets"}
             </p>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-white/35">
+              Markets v1.0
+            </p>
             {tenant?.subscription_status === "trial" ? (
-              <span className="mt-1 inline-flex rounded-full bg-gold px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-white">
+              <span className="mt-2 inline-flex rounded-full bg-white/10 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-blue-light ring-1 ring-white/10">
                 Trial - {daysLeft} days left
               </span>
             ) : null}
@@ -268,13 +271,13 @@ export function Sidebar({
         </div>
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5">
         {visibleSections.map((section) => (
           <div key={section.label}>
-            <p className="px-2 font-mono text-[11px] font-bold uppercase tracking-wide text-blue-light/70">
+            <p className="px-3 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-blue-light/45">
               {section.label}
             </p>
-            <div className="mt-2 space-y-1">
+            <div className="mt-2 space-y-px">
               {section.items.map((item) => {
                 const Icon = item.icon;
                 const active = isActivePath(pathname, item.href);
@@ -287,7 +290,7 @@ export function Sidebar({
                       key={item.href}
                       type="button"
                       onClick={() => setGatedFeature(feature)}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-blue-light/60 transition hover:bg-white/10 hover:text-white"
+                      className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] font-semibold text-blue-light/60 transition hover:bg-white/10 hover:text-white"
                     >
                       <Icon className="h-4 w-4" aria-hidden="true" />
                       <span className="flex-1">{item.label}</span>
@@ -302,8 +305,8 @@ export function Sidebar({
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-blue-light transition hover:bg-white/10 hover:text-white",
-                      active && "bg-white text-blue-dark hover:bg-white",
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-semibold text-blue-light/75 transition hover:bg-white/10 hover:text-white",
+                      active && "bg-white/15 text-white shadow-[inset_2px_0_0_var(--blue-light)] hover:bg-white/15",
                     )}
                   >
                     <Icon className="h-4 w-4" aria-hidden="true" />
@@ -316,17 +319,19 @@ export function Sidebar({
         ))}
       </nav>
 
-      <div className="border-t border-white/10 p-4">
-        <p className="truncate text-sm font-semibold text-white">
-          {tenantUser?.full_name ?? "Team member"}
-        </p>
-        <Badge variant="blue" className="mt-2 bg-white/10 text-blue-light">
-          {formatRole(role)}
-        </Badge>
+      <div className="border-t border-white/10 p-3">
+        <div className="rounded-md px-3 py-2">
+          <p className="truncate text-[13px] font-semibold text-white">
+            {tenantUser?.full_name ?? "Team member"}
+          </p>
+          <Badge variant="blue" className="mt-2 bg-white/10 text-blue-light ring-1 ring-white/10">
+            {formatRole(role)}
+          </Badge>
+        </div>
         <Button
           variant="ghost"
           onClick={signOut}
-          className="mt-4 w-full justify-start bg-white/5 text-blue-light hover:bg-white/10 hover:text-white"
+          className="mt-2 w-full justify-start rounded-md bg-white/5 text-blue-light hover:bg-white/10 hover:text-white"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
           Sign out

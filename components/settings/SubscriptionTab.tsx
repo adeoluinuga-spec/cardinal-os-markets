@@ -44,11 +44,11 @@ const PAID_TIERS: ("starter" | "growth" | "professional")[] = [
 const TRIAL_LENGTH_DAYS = 14;
 
 function naira(amount: number) {
-  return `â‚¦${amount.toLocaleString("en-NG")}`;
+  return `₦${amount.toLocaleString("en-NG")}`;
 }
 
 function formatDate(value: string | null) {
-  if (!value) return "â€”";
+  if (!value) return "-";
   return new Date(value).toLocaleDateString("en-NG", {
     day: "numeric",
     month: "long",
@@ -199,7 +199,7 @@ export function SubscriptionTab({ onToast }: { onToast: (m: string) => void }) {
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-green" aria-hidden="true" />
             <p className="font-semibold text-ink">
-              {TIER_NAMES[tier]} plan Â· Active
+              {TIER_NAMES[tier]} plan - Active
             </p>
           </div>
           <p className="mt-2 font-display text-2xl font-bold text-ink">

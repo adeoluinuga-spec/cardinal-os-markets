@@ -8,7 +8,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { Phone, Truck } from "lucide-react";
+import { CheckCircle2, Phone, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -46,8 +46,8 @@ function itemSummary(order: DispatchOrder) {
   );
 }
 
-function formatDate(value: string | null) {
-  if (!value) return "—";
+function formatDate(value: string | null | undefined) {
+  if (!value) return "-";
   return new Intl.DateTimeFormat("en-NG", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -71,13 +71,11 @@ export default function DispatchPage() {
     ]);
     if (ready.ok) {
       const data = (await ready.json()) as { orders: DispatchOrder[] };
-      const hydrated = await hydrateOrders(data.orders);
-      setReadyOrders(hydrated);
+      setReadyOrders(await hydrateOrders(data.orders));
     }
     if (transit.ok) {
       const data = (await transit.json()) as { orders: DispatchOrder[] };
-      const hydrated = await hydrateOrders(data.orders);
-      setTransitOrders(hydrated);
+      setTransitOrders(await hydrateOrders(data.orders));
     }
     setIsLoading(false);
   }, []);
@@ -92,15 +90,46 @@ export default function DispatchPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5">
       {toast ? (
         <div className="fixed right-4 top-16 z-50 rounded-xl border border-blue-border bg-white px-4 py-3 text-sm font-semibold text-ink shadow-lg">
           {toast}
         </div>
       ) : null}
+
       <PageHeader title="Dispatch" subtitle="Assign riders and confirm deliveries." />
+
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          ["ready", "Ready to Ship", readyOrders.length],
+          ["transit", "In Transit", transitOrders.length],
+        ].map(([value, label, count]) => {
+          const active = activeTab === value;
+          return (
+            <button
+              key={value as string}
+              type="button"
+              onClick={() => setActiveTab(value as "ready" | "transit")}
+              className={cn(
+                "rounded-xl border p-4 text-left transition active:scale-[0.99]",
+                active
+                  ? "border-blue-primary bg-blue-primary text-white"
+                  : "border-blue-border bg-white text-ink hover:bg-blue-pale",
+              )}
+            >
+              <p className="font-display text-[30px] font-bold leading-none">
+                {count}
+              </p>
+              <p className="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] opacity-75">
+                {label}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
       <Card className="p-3">
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto">
           {[
             ["ready", "Ready to Ship"],
             ["transit", "In Transit"],
@@ -109,10 +138,10 @@ export default function DispatchPage() {
               key={value}
               onClick={() => setActiveTab(value as "ready" | "transit")}
               className={cn(
-                "rounded-lg px-4 py-2 text-sm font-semibold",
+                "rounded-full border px-4 py-2 text-xs font-semibold",
                 activeTab === value
-                  ? "bg-blue-primary text-white"
-                  : "bg-blue-pale text-ink2 hover:bg-blue-light",
+                  ? "border-blue-primary bg-blue-primary text-white"
+                  : "border-blue-border bg-white text-ink2 hover:bg-blue-pale",
               )}
             >
               {label}
@@ -127,12 +156,9 @@ export default function DispatchPage() {
             <Spinner className="h-8 w-8" />
           </div>
         ) : activeTab === "ready" ? (
-          <ReadyTable orders={activeOrders} onAssign={setAssigningOrder} />
+          <ReadyCards orders={activeOrders} onAssign={setAssigningOrder} />
         ) : (
-          <TransitTable
-            orders={activeOrders}
-            onManual={(delivery) => setManualDelivery(delivery)}
-          />
+          <TransitCards orders={activeOrders} onManual={setManualDelivery} />
         )}
       </Card>
 
@@ -165,7 +191,7 @@ export default function DispatchPage() {
   );
 }
 
-function ReadyTable({
+function ReadyCards({
   orders,
   onAssign,
 }: {
@@ -173,54 +199,57 @@ function ReadyTable({
   onAssign: (order: DispatchOrder) => void;
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[900px] text-left text-sm">
-        <thead className="bg-blue-pale text-xs uppercase text-ink3">
-          <tr>
-            <th className="px-5 py-3">Order #</th>
-            <th className="px-5 py-3">Customer</th>
-            <th className="px-5 py-3">Address</th>
-            <th className="px-5 py-3">Items</th>
-            <th className="px-5 py-3">Expected delivery</th>
-            <th className="px-5 py-3">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-blue-border">
-          {orders.map((order) => (
-            <tr key={order.id}>
-              <td className="px-5 py-4 font-mono font-bold text-blue-primary">
-                {order.order_number}
-              </td>
-              <td className="px-5 py-4 font-semibold text-ink">
-                {order.customer_name}
-              </td>
-              <td className="px-5 py-4 text-ink2">{order.delivery_address}</td>
-              <td className="px-5 py-4 text-ink2">{itemSummary(order)}</td>
-              <td className="px-5 py-4 text-ink2">
-                {formatDate(order.expected_delivery_at)}
-              </td>
-              <td className="px-5 py-4">
-                <Button onClick={() => onAssign(order)}>
-                  <Truck className="h-4 w-4" aria-hidden="true" />
-                  Assign Rider
-                </Button>
-              </td>
-            </tr>
-          ))}
-          {!orders.length ? (
-            <tr>
-              <td colSpan={6} className="px-5 py-12 text-center text-ink2">
-                No packaged orders ready to ship.
-              </td>
-            </tr>
-          ) : null}
-        </tbody>
-      </table>
+    <div>
+      <div className="border-b border-blue-border px-5 py-4">
+        <h2 className="font-display text-[20px] font-bold text-ink">Ready to Ship</h2>
+        <p className="mt-1 text-xs text-ink2">Packaged orders waiting for rider assignment.</p>
+      </div>
+      <div className="grid gap-3 p-4 lg:grid-cols-2">
+        {orders.map((order) => (
+          <button
+            key={order.id}
+            type="button"
+            onClick={() => onAssign(order)}
+            className="rounded-xl border border-blue-border bg-white p-4 text-left transition hover:bg-blue-pale active:scale-[0.99]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-mono text-xs font-bold text-blue-primary">
+                  {order.order_number}
+                </p>
+                <h3 className="mt-1 truncate text-sm font-bold text-ink">
+                  {order.customer_name}
+                </h3>
+              </div>
+              <span className="rounded-full bg-blue-light px-2.5 py-1 font-mono text-[10px] font-bold uppercase text-blue-primary">
+                Packaged
+              </span>
+            </div>
+            <p className="mt-4 line-clamp-2 text-sm font-semibold text-ink2">
+              {order.delivery_address || "No delivery address saved"}
+            </p>
+            <p className="mt-3 line-clamp-2 text-xs text-ink3">{itemSummary(order)}</p>
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-blue-border pt-3">
+              <span className="font-mono text-xs text-ink2">
+                Expected: {formatDate(order.expected_delivery_at)}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-primary px-3 py-2 text-xs font-semibold text-white">
+                <Truck className="h-3.5 w-3.5" /> Assign
+              </span>
+            </div>
+          </button>
+        ))}
+        {!orders.length ? (
+          <div className="col-span-full px-5 py-12 text-center text-ink2">
+            No packaged orders ready to ship.
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-function TransitTable({
+function TransitCards({
   orders,
   onManual,
 }: {
@@ -228,71 +257,64 @@ function TransitTable({
   onManual: (delivery: Delivery) => void;
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[900px] text-left text-sm">
-        <thead className="bg-blue-pale text-xs uppercase text-ink3">
-          <tr>
-            <th className="px-5 py-3">Order #</th>
-            <th className="px-5 py-3">Customer</th>
-            <th className="px-5 py-3">Rider name</th>
-            <th className="px-5 py-3">Rider phone</th>
-            <th className="px-5 py-3">Dispatched time</th>
-            <th className="px-5 py-3">OTP status</th>
-            <th className="px-5 py-3">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-blue-border">
-          {orders.map((order) => {
-            const delivery = order.deliveries?.[0];
-            return (
-              <tr key={order.id}>
-                <td className="px-5 py-4 font-mono font-bold text-blue-primary">
-                  {order.order_number}
-                </td>
-                <td className="px-5 py-4 font-semibold text-ink">
-                  {order.customer_name}
-                </td>
-                <td className="px-5 py-4 text-ink2">{delivery?.rider_name ?? "—"}</td>
-                <td className="px-5 py-4">
+    <div>
+      <div className="border-b border-blue-border px-5 py-4">
+        <h2 className="font-display text-[20px] font-bold text-ink">In Transit</h2>
+        <p className="mt-1 text-xs text-ink2">Live dispatches awaiting OTP confirmation.</p>
+      </div>
+      <div className="grid gap-3 p-4 lg:grid-cols-2">
+        {orders.map((order) => {
+          const delivery = order.deliveries?.[0];
+          return (
+            <div key={order.id} className="rounded-xl border border-blue-border bg-white p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-mono text-xs font-bold text-blue-primary">
+                    {order.order_number}
+                  </p>
+                  <h3 className="mt-1 text-sm font-bold text-ink">{order.customer_name}</h3>
+                </div>
+                <Badge variant={delivery?.otp_verified ? "green" : "gold"}>
+                  {delivery?.otp_verified ? "Verified" : "Pending"}
+                </Badge>
+              </div>
+              <div className="mt-4 rounded-lg border border-blue-border bg-blue-pale p-3 text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="font-semibold text-ink2">Rider</span>
+                  <span className="font-bold text-ink">{delivery?.rider_name ?? "-"}</span>
+                </div>
+                <div className="mt-2 flex justify-between gap-3">
+                  <span className="font-semibold text-ink2">Phone</span>
                   {delivery?.rider_phone ? (
-                    <a
-                      href={`tel:${delivery.rider_phone}`}
-                      className="inline-flex items-center gap-2 text-blue-primary"
-                    >
-                      <Phone className="h-4 w-4" aria-hidden="true" />
-                      {delivery.rider_phone}
+                    <a href={`tel:${delivery.rider_phone}`} className="inline-flex items-center gap-1.5 font-mono font-bold text-blue-primary">
+                      <Phone className="h-3.5 w-3.5" /> {delivery.rider_phone}
                     </a>
                   ) : (
-                    "—"
+                    <span className="text-ink3">-</span>
                   )}
-                </td>
-                <td className="px-5 py-4 text-ink2">
-                  {formatDate(delivery?.dispatched_at ?? order.created_at)}
-                </td>
-                <td className="px-5 py-4">
-                  <Badge variant={delivery?.otp_verified ? "green" : "gold"}>
-                    {delivery?.otp_verified ? "Verified" : "Pending"}
-                  </Badge>
-                </td>
-                <td className="px-5 py-4">
-                  {delivery ? (
-                    <Button variant="ghost" onClick={() => onManual(delivery)}>
-                      Mark Delivered (Manual)
-                    </Button>
-                  ) : null}
-                </td>
-              </tr>
-            );
-          })}
-          {!orders.length ? (
-            <tr>
-              <td colSpan={7} className="px-5 py-12 text-center text-ink2">
-                No orders currently in transit.
-              </td>
-            </tr>
-          ) : null}
-        </tbody>
-      </table>
+                </div>
+                <div className="mt-2 flex justify-between gap-3">
+                  <span className="font-semibold text-ink2">Dispatched</span>
+                  <span className="font-mono text-xs text-ink2">
+                    {formatDate(delivery?.dispatched_at ?? order.created_at)}
+                  </span>
+                </div>
+              </div>
+              {delivery ? (
+                <Button variant="ghost" onClick={() => onManual(delivery)} className="mt-4 w-full">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Mark Delivered (Manual)
+                </Button>
+              ) : null}
+            </div>
+          );
+        })}
+        {!orders.length ? (
+          <div className="col-span-full px-5 py-12 text-center text-ink2">
+            No orders currently in transit.
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -335,29 +357,13 @@ function AssignRiderModal({
   }
 
   return (
-    <ModalShell title={`Assign Rider — ${order.order_number}`} onClose={onClose}>
+    <ModalShell title={`Assign Rider - ${order.order_number}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <Input
-          value={riderName}
-          onChange={(event) => setRiderName(event.target.value)}
-          placeholder="Rider Name"
-          required
-        />
-        <Input
-          value={riderPhone}
-          onChange={(event) => setRiderPhone(event.target.value)}
-          placeholder="Rider Phone"
-          required
-        />
-        <Input
-          type="date"
-          value={estimatedDate}
-          onChange={(event) => setEstimatedDate(event.target.value)}
-        />
+        <Input value={riderName} onChange={(event) => setRiderName(event.target.value)} placeholder="Rider Name" required />
+        <Input value={riderPhone} onChange={(event) => setRiderPhone(event.target.value)} placeholder="Rider Phone" required />
+        <Input type="date" value={estimatedDate} onChange={(event) => setEstimatedDate(event.target.value)} />
         {error ? <p className="text-sm font-semibold text-red-700">{error}</p> : null}
-        <Button type="submit" className="w-full">
-          Confirm Assignment
-        </Button>
+        <Button type="submit" className="w-full">Confirm Assignment</Button>
       </form>
     </ModalShell>
   );
@@ -404,9 +410,7 @@ function ManualDeliveredModal({
           required
         />
         {error ? <p className="text-sm font-semibold text-red-700">{error}</p> : null}
-        <Button type="submit" className="w-full">
-          Mark Delivered
-        </Button>
+        <Button type="submit" className="w-full">Mark Delivered</Button>
       </form>
     </ModalShell>
   );
@@ -426,11 +430,7 @@ function ModalShell({
       <Card className="w-full max-w-lg">
         <div className="mb-5 flex items-start justify-between gap-4">
           <h2 className="font-display text-2xl font-bold text-ink">{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 text-ink2 hover:bg-blue-pale"
-          >
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-ink2 hover:bg-blue-pale">
             ×
           </button>
         </div>
@@ -443,19 +443,12 @@ function ModalShell({
 async function hydrateOrders(orders: DispatchOrder[]) {
   return Promise.all(
     orders.map(async (order) => {
-      const detail = await fetch(`/api/orders/${order.id}`, {
-        cache: "no-store",
-      });
-
-      if (!detail.ok) {
-        return order;
-      }
-
+      const detail = await fetch(`/api/orders/${order.id}`, { cache: "no-store" });
+      if (!detail.ok) return order;
       const data = (await detail.json()) as {
         items: { product_name: string; quantity: number }[];
         deliveries: Delivery[];
       };
-
       return {
         ...order,
         order_items: data.items,

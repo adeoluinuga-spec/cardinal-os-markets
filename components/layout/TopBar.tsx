@@ -30,6 +30,26 @@ const pageTitles: Record<string, string> = {
   "/app/rider": "Rider",
 };
 
+const pageSections: Record<string, string> = {
+  "/app/dashboard": "Command",
+  "/app/tasks": "Command",
+  "/app/customers": "Command",
+  "/app/orders": "Command",
+  "/app/submit-payment": "Command",
+  "/app/performance": "Command",
+  "/app/products": "Operations",
+  "/app/incoming-stock": "Operations",
+  "/app/dispatch": "Operations",
+  "/app/pickup": "Operations",
+  "/app/finance": "Finance",
+  "/app/finance/payments": "Finance",
+  "/app/brain": "Intelligence",
+  "/app/ai": "Intelligence",
+  "/app/autopilot": "Intelligence",
+  "/app/settings": "Settings",
+  "/app/settings/activity": "Settings",
+};
+
 function getPageTitle(pathname: string) {
   const exactTitle = pageTitles[pathname];
 
@@ -59,10 +79,12 @@ export function TopBar({
     tenant?.subscription_status === "trial" ||
     tenant?.subscription_tier === "starter";
   const canCreateOrder = Boolean(role && ORDER_CREATOR_ROLES.includes(role));
+  const title = getPageTitle(pathname);
+  const section = pageSections[pathname] ?? "";
 
   return (
     <header
-      className={`fixed left-0 right-0 z-20 flex h-14 items-center justify-between border-b border-blue-border bg-white px-4 md:left-[240px] ${
+      className={`fixed left-0 right-0 z-20 flex h-14 items-center justify-between border-b border-blue-border bg-white px-4 md:left-[240px] md:px-8 ${
         hasTrialBanner ? "top-10" : "top-0"
       }`}
     >
@@ -75,17 +97,29 @@ export function TopBar({
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
-        <h1 className="truncate font-display text-xl font-bold text-ink">
-          {getPageTitle(pathname)}
-        </h1>
+        <div className="min-w-0">
+          <h1 className="truncate font-display text-xl font-bold leading-tight text-ink">
+            {title}
+          </h1>
+          <p className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-ink3 sm:block">
+            {section ? `${section} / ${title}` : title}
+          </p>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-2 rounded-full bg-green-light px-3 py-1.5 text-xs font-semibold text-green sm:flex">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-green" />
+          </span>
+          AI Active
+        </div>
         {canCreateOrder ? (
           <button
             type="button"
             onClick={() => setIsOrderModalOpen(true)}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-blue-primary px-3 text-xs font-semibold text-white transition hover:bg-blue-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-mid focus-visible:ring-offset-2"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-blue-primary px-3 text-xs font-semibold text-white transition hover:bg-blue-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-mid focus-visible:ring-offset-2"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">New Order</span>
@@ -94,14 +128,14 @@ export function TopBar({
         {shouldShowUpgrade ? (
           <Link
             href="/upgrade"
-            className="inline-flex h-9 items-center justify-center rounded-lg bg-gold px-3 text-xs font-semibold text-white transition hover:bg-gold/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
+            className="inline-flex h-9 items-center justify-center rounded-md bg-gold px-3 text-xs font-semibold text-white transition hover:bg-gold/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
           >
             Upgrade
           </Link>
         ) : null}
         <button
           type="button"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-border text-blue-primary hover:bg-blue-light"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-blue-border text-blue-primary hover:bg-blue-light"
           aria-label="Notifications"
         >
           <Bell className="h-4 w-4" aria-hidden="true" />

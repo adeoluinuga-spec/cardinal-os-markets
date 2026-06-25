@@ -61,7 +61,7 @@ function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-blue-pale text-ink">
+    <div className="min-h-screen bg-white text-ink">
       <Sidebar />
       {hasTrialBanner ? <TrialBanner trialEndsAt={tenant.trial_ends_at} /> : null}
       <TopBar
@@ -73,7 +73,7 @@ function AppShell({ children }: { children: ReactNode }) {
         onClose={() => setIsMobileMenuOpen(false)}
       />
       <main
-        className={`min-h-screen px-4 pb-8 md:pl-[264px] md:pr-6 ${
+        className={`animate-page-in min-h-screen overflow-x-hidden px-3 pb-8 sm:px-4 md:pl-[272px] md:pr-8 ${
           hasTrialBanner ? "pt-[7.5rem]" : "pt-20"
         }`}
       >
