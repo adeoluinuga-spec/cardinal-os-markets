@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient, getCurrentUserWithTenant } from "@/lib/serverAuth";
+import { getTierLimits, normalizeTier } from "@/lib/tiers";
 
 type Result = { title: string; source: string; excerpt: string };
 
@@ -11,6 +12,34 @@ export async function POST(request: Request) {
   const term = (query ?? "").trim();
   if (!term) return NextResponse.json({ results: [] });
   const supabase = await createServerSupabaseClient();
+
+  // Enforce the monthly AI query limit (tracked in usage_tracking).
+  const tier = normalizeTier(t.subscription_tier);
+  const maxQueries = getTierLimits(tier).max_ai_queries_per_month;
+  if (maxQueries !== -1) {
+    const { data: usage } = await supabase.rpc("get_usage", {
+      p_tenant_id: t.id,
+      p_metric: "ai_queries",
+    });
+    if ((usage ?? 0) >= maxQueries) {
+      const now = new Date();
+      const resetsOn = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+        .toISOString()
+        .slice(0, 10);
+      return NextResponse.json(
+        {
+          error: "USAGE_LIMIT_REACHED",
+          message: `You have used all ${maxQueries} AI queries for this month. Upgrade to Growth or Professional for unlimited AI queries.`,
+          limit: maxQueries,
+          current: usage ?? 0,
+          resets_on: resetsOn,
+          upgrade_required: true,
+        },
+        { status: 403 },
+      );
+    }
+  }
+  await supabase.rpc("increment_usage", { p_tenant_id: t.id, p_metric: "ai_queries" });
   const like = `%${term}%`;
   const [customers, products, orders] = await Promise.all([
     supabase.from("customers").select("full_name, phone, email, customer_type, notes").eq("tenant_id", t.id).or(`full_name.ilike.${like},phone.ilike.${like},email.ilike.${like},notes.ilike.${like}`).limit(8),

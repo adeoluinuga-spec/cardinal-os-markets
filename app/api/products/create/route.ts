@@ -3,6 +3,7 @@ import {
   createServerSupabaseClient,
   getCurrentUserWithTenant,
 } from "@/lib/serverAuth";
+import { getTierLimits, isAtLimit, normalizeTier } from "@/lib/tiers";
 
 function generateSku(name: string) {
   const prefix = name.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase() || "SKU";
@@ -37,7 +38,26 @@ export async function POST(request: Request) {
     );
   }
 
+  const tier = normalizeTier(normalizedTenant.subscription_tier);
   const supabase = await createServerSupabaseClient();
+  const { count: productCount } = await supabase
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", normalizedTenant.id);
+
+  if (isAtLimit(tier, "max_products", productCount ?? 0)) {
+    return NextResponse.json(
+      {
+        error: "LIMIT_REACHED",
+        message: "You have reached the maximum product limit for your plan.",
+        limit: getTierLimits(tier).max_products,
+        current: productCount ?? 0,
+        upgrade_required: true,
+      },
+      { status: 403 },
+    );
+  }
+
   const { data, error } = await supabase
     .from("products")
     .insert({

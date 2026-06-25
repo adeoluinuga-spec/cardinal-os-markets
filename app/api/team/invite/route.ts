@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getTierLimits, isAtLimit, normalizeTier } from "@/lib/tiers";
 
 const allowedRoles = new Set(["sales_agent", "warehouse", "finance", "rider"]);
 
@@ -28,6 +29,32 @@ export async function POST(request: Request) {
 
   if (!allowedRoles.has(body.role)) {
     return NextResponse.json({ error: "Invalid invite role." }, { status: 400 });
+  }
+
+  // Enforce the staff limit for the tenant's plan.
+  const { data: tenantRow } = await supabaseAdmin
+    .from("tenants")
+    .select("subscription_tier")
+    .eq("id", body.tenantId)
+    .maybeSingle();
+  const tier = normalizeTier(tenantRow?.subscription_tier ?? null);
+  const { count: staffCount } = await supabaseAdmin
+    .from("tenant_users")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", body.tenantId)
+    .eq("is_active", true);
+
+  if (isAtLimit(tier, "max_staff", staffCount ?? 0)) {
+    return NextResponse.json(
+      {
+        error: "LIMIT_REACHED",
+        message: "You have reached the maximum staff limit for your plan.",
+        limit: getTierLimits(tier).max_staff,
+        current: staffCount ?? 0,
+        upgrade_required: true,
+      },
+      { status: 403 },
+    );
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";

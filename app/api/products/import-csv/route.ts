@@ -3,6 +3,7 @@ import {
   createServerSupabaseClient,
   getCurrentUserWithTenant,
 } from "@/lib/serverAuth";
+import { getTierLimits, normalizeTier } from "@/lib/tiers";
 
 type CsvProduct = {
   name?: string;
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     : { data: [] };
   const existingSkus = new Set((existing ?? []).map((row) => row.sku));
   const skipped = rows.filter((row) => row.sku && existingSkus.has(String(row.sku)));
-  const inserts = rows
+  const candidates = rows
     .filter((row) => row.name && (!row.sku || !existingSkus.has(String(row.sku))))
     .map((row) => ({
       tenant_id: normalizedTenant.id,
@@ -57,6 +58,38 @@ export async function POST(request: Request) {
       unit: row.unit ? String(row.unit).trim() : "unit",
     }));
 
+  // Enforce the product limit: only import up to the remaining slots.
+  const tier = normalizeTier(normalizedTenant.subscription_tier);
+  const maxProducts = getTierLimits(tier).max_products;
+  let inserts = candidates;
+  let skippedDueToLimit = 0;
+
+  if (maxProducts !== -1) {
+    const { count: productCount } = await supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", normalizedTenant.id);
+    const remaining = Math.max(0, maxProducts - (productCount ?? 0));
+
+    if (remaining <= 0 && candidates.length > 0) {
+      return NextResponse.json(
+        {
+          error: "LIMIT_REACHED",
+          message: "You have reached the maximum product limit for your plan.",
+          limit: maxProducts,
+          current: productCount ?? 0,
+          upgrade_required: true,
+        },
+        { status: 403 },
+      );
+    }
+
+    if (candidates.length > remaining) {
+      inserts = candidates.slice(0, remaining);
+      skippedDueToLimit = candidates.length - remaining;
+    }
+  }
+
   if (inserts.length) {
     const { error } = await supabase.from("products").insert(inserts);
 
@@ -68,5 +101,11 @@ export async function POST(request: Request) {
   return NextResponse.json({
     imported: inserts.length,
     skipped: skipped.length,
+    skipped_due_to_limit: skippedDueToLimit,
+    limit_reached: skippedDueToLimit > 0,
+    message:
+      skippedDueToLimit > 0
+        ? `Imported ${inserts.length} product(s). ${skippedDueToLimit} skipped because your plan allows a maximum of ${maxProducts} products. Upgrade for a higher limit.`
+        : `Imported ${inserts.length} product(s).`,
   });
 }

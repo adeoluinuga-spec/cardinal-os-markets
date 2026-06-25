@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,6 +13,7 @@ import {
   Database,
   LayoutDashboard,
   ListTodo,
+  Lock,
   LogOut,
   Package,
   Receipt,
@@ -25,8 +27,16 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { useAuth } from "@/context/AuthContext";
 import { useTenant } from "@/context/TenantContext";
+import { useGating } from "@/hooks/useGating";
+import {
+  FEATURE_LABELS,
+  minimumTierForFeature,
+  type TierLimits,
+} from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -34,6 +44,7 @@ type NavItem = {
   href: string;
   icon: LucideIcon;
   roles: string[];
+  feature?: keyof TierLimits["features"];
 };
 
 type NavSection = {
@@ -58,6 +69,7 @@ const navSections: NavSection[] = [
         href: "/app/tasks",
         icon: ListTodo,
         roles: [...allRoles, "sales_agent", "warehouse", "finance"],
+        feature: "tasks",
       },
       {
         label: "Customers",
@@ -82,6 +94,7 @@ const navSections: NavSection[] = [
         href: "/app/performance",
         icon: TrendingUp,
         roles: allRoles,
+        feature: "performance_tracking",
       },
     ],
   },
@@ -151,6 +164,7 @@ const navSections: NavSection[] = [
         href: "/app/autopilot",
         icon: Brain,
         roles: allRoles,
+        feature: "autopilot_inbox",
       },
     ],
   },
@@ -168,6 +182,7 @@ const navSections: NavSection[] = [
         href: "/app/settings/activity",
         icon: Activity,
         roles: allRoles,
+        feature: "activity_log",
       },
     ],
   },
@@ -207,6 +222,9 @@ export function Sidebar({
   const pathname = usePathname();
   const { signOut } = useAuth();
   const { tenant, tenantUser, role } = useTenant();
+  const { can, tier } = useGating();
+  const [gatedFeature, setGatedFeature] =
+    useState<keyof TierLimits["features"] | null>(null);
   const visibleSections = navSections
     .map((section) => ({
       ...section,
@@ -260,6 +278,23 @@ export function Sidebar({
               {section.items.map((item) => {
                 const Icon = item.icon;
                 const active = isActivePath(pathname, item.href);
+                const locked = item.feature ? !can(item.feature) : false;
+
+                if (locked && item.feature) {
+                  const feature = item.feature;
+                  return (
+                    <button
+                      key={item.href}
+                      type="button"
+                      onClick={() => setGatedFeature(feature)}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-blue-light/60 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                      <span className="flex-1">{item.label}</span>
+                      <Lock className="h-3.5 w-3.5 text-gold" aria-hidden="true" />
+                    </button>
+                  );
+                }
 
                 return (
                   <Link
@@ -297,6 +332,22 @@ export function Sidebar({
           Sign out
         </Button>
       </div>
+
+      <Modal
+        open={gatedFeature !== null}
+        onClose={() => setGatedFeature(null)}
+        title="Upgrade required"
+        className="bg-transparent shadow-none"
+      >
+        {gatedFeature ? (
+          <UpgradePrompt
+            feature={FEATURE_LABELS[gatedFeature]}
+            requiredTier={minimumTierForFeature(gatedFeature)}
+            currentTier={tier}
+            className="border-0 shadow-none"
+          />
+        ) : null}
+      </Modal>
     </aside>
   );
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserWithTenant, createServerSupabaseClient } from "@/lib/serverAuth";
+import { isAtLimit, normalizeTier, getTierLimits } from "@/lib/tiers";
 
 export async function POST(request: Request) {
   const { tenant } = await getCurrentUserWithTenant();
@@ -9,6 +10,27 @@ export async function POST(request: Request) {
   }
 
   const normalizedTenant = Array.isArray(tenant) ? tenant[0] : tenant;
+  const tier = normalizeTier(normalizedTenant.subscription_tier);
+
+  const supabase = await createServerSupabaseClient();
+  const { count: customerCount } = await supabase
+    .from("customers")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", normalizedTenant.id);
+
+  if (isAtLimit(tier, "max_customers", customerCount ?? 0)) {
+    return NextResponse.json(
+      {
+        error: "LIMIT_REACHED",
+        message: "You have reached the maximum customer limit for your plan.",
+        limit: getTierLimits(tier).max_customers,
+        current: customerCount ?? 0,
+        upgrade_required: true,
+      },
+      { status: 403 },
+    );
+  }
+
   const body = (await request.json()) as {
     full_name?: string;
     phone?: string;
@@ -26,7 +48,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("customers")
     .insert({

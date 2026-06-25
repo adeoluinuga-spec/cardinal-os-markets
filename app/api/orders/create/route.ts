@@ -3,6 +3,7 @@ import {
   createServerSupabaseClient,
   getCurrentUserWithTenant,
 } from "@/lib/serverAuth";
+import { getTierLimits, normalizeTier } from "@/lib/tiers";
 
 type OrderItemInput = {
   product_id: string;
@@ -46,6 +47,35 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createServerSupabaseClient();
+
+  // Enforce the monthly order limit (tracked in usage_tracking).
+  const tier = normalizeTier(normalizedTenant.subscription_tier);
+  const maxOrders = getTierLimits(tier).max_orders_per_month;
+  if (maxOrders !== -1) {
+    const { data: monthlyUsage } = await supabase.rpc("get_usage", {
+      p_tenant_id: normalizedTenant.id,
+      p_metric: "orders_this_month",
+    });
+    if ((monthlyUsage ?? 0) >= maxOrders) {
+      const now = new Date();
+      const resetsOn = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+        .toISOString()
+        .slice(0, 10);
+      return NextResponse.json(
+        {
+          error: "LIMIT_REACHED",
+          message:
+            "You have reached the maximum number of orders for your plan this month.",
+          limit: maxOrders,
+          current: monthlyUsage ?? 0,
+          resets_on: resetsOn,
+          upgrade_required: true,
+        },
+        { status: 403 },
+      );
+    }
+  }
+
   const { count } = await supabase
     .from("orders")
     .select("id", { count: "exact", head: true })
@@ -138,6 +168,12 @@ export async function POST(request: Request) {
     })
     .eq("tenant_id", normalizedTenant.id)
     .eq("id", body.customer_id);
+
+  // Record the order against this month's usage counter.
+  await supabase.rpc("increment_usage", {
+    p_tenant_id: normalizedTenant.id,
+    p_metric: "orders_this_month",
+  });
 
   return NextResponse.json({ order });
 }
