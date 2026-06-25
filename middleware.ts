@@ -52,12 +52,42 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (pathname.startsWith("/app") || pathname === "/onboarding") {
+  if (
+    pathname.startsWith("/app") ||
+    pathname === "/onboarding" ||
+    pathname.startsWith("/association-admin")
+  ) {
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       url.searchParams.set("next", pathname);
       return NextResponse.redirect(url);
+    }
+
+    if (pathname.startsWith("/association-admin")) {
+      const slug = pathname.split("/")[2];
+      const { data: association } = await supabase
+        .from("associations")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+      const { data: associationAdmin } = association?.id
+        ? await supabase
+            .from("association_admins")
+            .select("id")
+            .eq("association_id", association.id)
+            .eq("user_id", user.id)
+            .maybeSingle()
+        : { data: null };
+
+      if (!associationAdmin) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        url.searchParams.set("next", pathname);
+        return NextResponse.redirect(url);
+      }
+
+      return response;
     }
 
     const { data: tenantUser } = await supabase

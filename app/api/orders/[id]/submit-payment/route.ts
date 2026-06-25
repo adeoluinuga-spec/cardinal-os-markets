@@ -4,6 +4,7 @@ import {
   createServerSupabaseClient,
   getCurrentUserWithTenant,
 } from "@/lib/serverAuth";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type RouteContext = {
   params: {
@@ -12,19 +13,14 @@ type RouteContext = {
 };
 
 export async function POST(request: Request, { params }: RouteContext) {
-  const { tenant, user } = await getCurrentUserWithTenant();
-
-  if (!tenant || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const normalizedTenant = Array.isArray(tenant) ? tenant[0] : tenant;
   const body = (await request.json()) as {
     amount?: number;
     channel?: string;
     reference?: string;
+    bank_name?: string;
     proof_url?: string | null;
     proof_file_name?: string | null;
+    tracking_token?: string;
   };
 
   if (!body.amount || !body.reference || !body.channel) {
@@ -34,11 +30,33 @@ export async function POST(request: Request, { params }: RouteContext) {
     );
   }
 
-  const supabase = await createServerSupabaseClient();
+  const { tenant, user } = await getCurrentUserWithTenant();
+  const supabase = tenant ? await createServerSupabaseClient() : supabaseAdmin;
+  let tenantId = Array.isArray(tenant) ? tenant[0]?.id : tenant?.id;
+
+  if (!tenantId) {
+    if (!body.tracking_token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: publicOrder } = await supabaseAdmin
+      .from("orders")
+      .select("id, tenant_id")
+      .eq("id", params.id)
+      .eq("tracking_token", body.tracking_token)
+      .maybeSingle();
+
+    if (!publicOrder) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    tenantId = publicOrder.tenant_id;
+  }
+
   const { data: duplicate } = await supabase
     .from("payments")
     .select("order:orders(order_number)")
-    .eq("tenant_id", normalizedTenant.id)
+    .eq("tenant_id", tenantId)
     .eq("reference", body.reference)
     .maybeSingle();
 
@@ -64,15 +82,16 @@ export async function POST(request: Request, { params }: RouteContext) {
   const { data, error } = await supabase
     .from("payments")
     .insert({
-      tenant_id: normalizedTenant.id,
+      tenant_id: tenantId,
       order_id: params.id,
       reference: body.reference,
       amount: Number(body.amount),
       channel: body.channel,
+      bank_name: body.bank_name ?? null,
       proof_url: body.proof_url ?? null,
       proof_hash: proofHash,
       status: "pending",
-      submitted_by: user.id,
+      submitted_by: user?.id ?? null,
     })
     .select("*")
     .single();

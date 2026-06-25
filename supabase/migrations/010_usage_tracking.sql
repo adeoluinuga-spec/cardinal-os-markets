@@ -3,7 +3,7 @@
 -- orders). Hard-count resources (staff/customers/products) are counted
 -- directly from their own tables, so they are not stored here.
 
-CREATE TABLE usage_tracking (
+CREATE TABLE IF NOT EXISTS usage_tracking (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid REFERENCES tenants NOT NULL,
   metric text NOT NULL CHECK (metric IN (
@@ -18,6 +18,7 @@ CREATE TABLE usage_tracking (
 
 ALTER TABLE usage_tracking
   ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "usage_tracking_tenant" ON usage_tracking;
 CREATE POLICY "usage_tracking_tenant"
   ON usage_tracking
   FOR ALL USING (tenant_id = get_tenant_id());
@@ -56,4 +57,5 @@ CREATE OR REPLACE FUNCTION get_usage(
   AND period_start = date_trunc('month', now())::date
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
-CREATE INDEX ON usage_tracking(tenant_id, metric, period_start);
+CREATE INDEX IF NOT EXISTS usage_tracking_tenant_metric_period_idx
+  ON usage_tracking(tenant_id, metric, period_start);
