@@ -31,7 +31,7 @@ export function calculateCustomerHealth(customer: CustomerHealthInput) {
     score += 15;
   }
 
-  if (Number(customer.lifetime_value ?? 0) > 500_000) {
+  if (Number(customer.lifetime_value ?? 0) >= 10_000_000) {
     score += 10;
   }
 

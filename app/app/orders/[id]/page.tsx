@@ -57,7 +57,8 @@ type DetailResponse = {
 const nextActions: Record<string, string> = {
   quote: "Request Payment",
   awaiting_payment: "Confirm Order",
-  confirmed: "Mark Packaged",
+  confirmed: "Move to Production",
+  production: "Mark Packaged",
   packaged: "Dispatch",
 };
 
@@ -89,7 +90,7 @@ function statusVariant(status: string | null) {
     return "red";
   }
 
-  if (status === "quote" || status === "awaiting_payment" || status === "pending") {
+  if (status === "quote" || status === "awaiting_payment" || status === "pending" || status === "production") {
     return "gold";
   }
 
@@ -508,7 +509,7 @@ function InvoiceModal({
                 Invoice
               </p>
               <p className="mt-2 font-mono text-lg font-bold text-blue-primary">
-                {detail.order.order_number}
+                INV-{detail.order.order_number}
               </p>
             </div>
             <div>

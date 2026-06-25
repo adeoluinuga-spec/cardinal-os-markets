@@ -3,17 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   Bot,
+  Boxes,
+  Brain,
   ClipboardList,
   CreditCard,
   Database,
   LayoutDashboard,
+  ListTodo,
   LogOut,
   Package,
   Receipt,
   Settings2,
+  Store,
+  TrendingUp,
   Truck,
   Users,
+  WalletCards,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
@@ -47,6 +54,12 @@ const navSections: NavSection[] = [
         roles: allRoles,
       },
       {
+        label: "Tasks",
+        href: "/app/tasks",
+        icon: ListTodo,
+        roles: [...allRoles, "sales_agent", "warehouse", "finance"],
+      },
+      {
         label: "Customers",
         href: "/app/customers",
         icon: Users,
@@ -57,6 +70,18 @@ const navSections: NavSection[] = [
         href: "/app/orders",
         icon: ClipboardList,
         roles: [...allRoles, "sales_agent", "warehouse", "finance"],
+      },
+      {
+        label: "Submit Payment",
+        href: "/app/submit-payment",
+        icon: WalletCards,
+        roles: [...allRoles, "sales_agent", "warehouse", "finance"],
+      },
+      {
+        label: "Performance",
+        href: "/app/performance",
+        icon: TrendingUp,
+        roles: allRoles,
       },
     ],
   },
@@ -70,10 +95,22 @@ const navSections: NavSection[] = [
         roles: [...allRoles, "warehouse"],
       },
       {
+        label: "Incoming Stock",
+        href: "/app/incoming-stock",
+        icon: Boxes,
+        roles: [...allRoles, "warehouse"],
+      },
+      {
         label: "Dispatch",
         href: "/app/dispatch",
         icon: Truck,
         roles: [...allRoles, "warehouse"],
+      },
+      {
+        label: "Store Pickup",
+        href: "/app/pickup",
+        icon: Store,
+        roles: [...allRoles, "warehouse", "sales_agent"],
       },
     ],
   },
@@ -109,6 +146,12 @@ const navSections: NavSection[] = [
         icon: Bot,
         roles: [...allRoles, "sales_agent"],
       },
+      {
+        label: "Autopilot",
+        href: "/app/autopilot",
+        icon: Brain,
+        roles: allRoles,
+      },
     ],
   },
   {
@@ -118,6 +161,12 @@ const navSections: NavSection[] = [
         label: "Settings",
         href: "/app/settings",
         icon: Settings2,
+        roles: allRoles,
+      },
+      {
+        label: "Activity Log",
+        href: "/app/settings/activity",
+        icon: Activity,
         roles: allRoles,
       },
     ],
@@ -194,7 +243,7 @@ export function Sidebar({
             </p>
             {tenant?.subscription_status === "trial" ? (
               <span className="mt-1 inline-flex rounded-full bg-gold px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-white">
-                Trial — {daysLeft} days left
+                Trial - {daysLeft} days left
               </span>
             ) : null}
           </div>

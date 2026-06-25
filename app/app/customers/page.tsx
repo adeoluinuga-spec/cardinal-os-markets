@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
+  Crown,
   Mail,
   MoreVertical,
   Phone,
@@ -135,6 +136,14 @@ function healthColor(score: number | null) {
   }
 
   return "border-red-600 text-red-700 bg-red-50";
+}
+
+function isVip(customer: Customer) {
+  return Number(customer.lifetime_value ?? 0) >= 10_000_000;
+}
+
+function isChurnRisk(customer: Customer) {
+  return Number(customer.health_score ?? 0) < 40;
 }
 
 function statusVariant(status: string | null) {
@@ -344,8 +353,19 @@ export default function CustomersPage() {
                     onClick={() => void openCustomer(customer.id)}
                     className="cursor-pointer bg-white transition hover:bg-blue-pale"
                   >
-                    <td className="px-5 py-4 font-bold text-ink">
-                      {customer.full_name}
+                    <td className="px-5 py-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-ink">{customer.full_name}</span>
+                        {isVip(customer) ? (
+                          <Badge variant="gold" className="gap-1">
+                            <Crown className="h-3 w-3" aria-hidden="true" />
+                            VIP
+                          </Badge>
+                        ) : null}
+                        {isChurnRisk(customer) ? (
+                          <Badge variant="red">Churn Risk</Badge>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-ink2">
                       {customer.phone || "—"}
@@ -603,6 +623,13 @@ function CustomerPanel({
         <Badge variant={typeVariant(customer.customer_type)}>
           {formatLabel(customer.customer_type)}
         </Badge>
+        {isVip(customer) ? (
+          <Badge variant="gold" className="gap-1">
+            <Crown className="h-3 w-3" aria-hidden="true" />
+            VIP
+          </Badge>
+        ) : null}
+        {isChurnRisk(customer) ? <Badge variant="red">Churn Risk</Badge> : null}
         {customer.city ? (
           <span className="text-sm font-semibold text-ink2">{customer.city}</span>
         ) : null}

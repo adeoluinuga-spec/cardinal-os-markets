@@ -29,6 +29,7 @@ const tabs = [
   { label: "Quote", value: "quote" },
   { label: "Awaiting Payment", value: "awaiting_payment" },
   { label: "Confirmed", value: "confirmed" },
+  { label: "Production", value: "production" },
   { label: "Packaged", value: "packaged" },
   { label: "Dispatched", value: "dispatched" },
   { label: "Delivered", value: "delivered" },
@@ -94,7 +95,7 @@ function statusVariant(status: string | null) {
     return "red";
   }
 
-  if (status === "quote" || status === "awaiting_payment") {
+  if (status === "quote" || status === "awaiting_payment" || status === "production") {
     return "gold";
   }
 
@@ -130,6 +131,12 @@ export default function OrdersPage() {
   useEffect(() => {
     void fetchOrders();
   }, [fetchOrders]);
+
+  useEffect(() => {
+    if (window.sessionStorage.getItem("cardinal-autopilot-draft")) {
+      setIsModalOpen(true);
+    }
+  }, []);
 
   return (
     <div className="space-y-6">

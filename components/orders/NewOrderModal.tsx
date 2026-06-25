@@ -36,6 +36,7 @@ type OrderItem = {
   product_name: string;
   quantity: number;
   unit_price: number;
+  stock_quantity: number;
 };
 
 const channels = [
@@ -94,6 +95,43 @@ export function NewOrderModal({
   useEffect(() => {
     if (!open) {
       return;
+    }
+
+    const storedDraft = window.sessionStorage.getItem("cardinal-autopilot-draft");
+    if (storedDraft) {
+      try {
+        const draft = JSON.parse(storedDraft) as {
+          customer_name?: string;
+          customer_phone?: string;
+          delivery_address?: string;
+          delivery_date?: string | null;
+          items?: { product_name: string; quantity: number; notes?: string }[];
+          notes?: string;
+        };
+        setCustomerSearch(draft.customer_name ?? "");
+        setNewCustomer({
+          full_name: draft.customer_name ?? "",
+          phone: draft.customer_phone ?? "",
+        });
+        setShowNewCustomer(Boolean(draft.customer_name));
+        setDeliveryAddress(draft.delivery_address ?? "");
+        setExpectedDeliveryAt(draft.delivery_date ?? "");
+        setNotes(
+          [
+            draft.notes,
+            draft.items?.length
+              ? `Autopilot draft items: ${draft.items
+                  .map((item) => `${item.quantity} x ${item.product_name}`)
+                  .join(", ")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n"),
+        );
+        window.sessionStorage.removeItem("cardinal-autopilot-draft");
+      } catch {
+        window.sessionStorage.removeItem("cardinal-autopilot-draft");
+      }
     }
 
     const timeout = window.setTimeout(async () => {
@@ -185,6 +223,7 @@ export function NewOrderModal({
         product_name: product.name,
         quantity: 1,
         unit_price: Number(product.unit_price ?? 0),
+        stock_quantity: Number(product.stock_quantity ?? 0),
       },
     ]);
     setProductSearch("");
@@ -404,6 +443,11 @@ export function NewOrderModal({
                   >
                     <p className="self-center text-sm font-semibold text-ink">
                       {item.product_name}
+                      {item.quantity > item.stock_quantity ? (
+                        <span className="ml-2 rounded-full bg-orange-50 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-orange-700">
+                          Back-order
+                        </span>
+                      ) : null}
                     </p>
                     <Input
                       type="number"
