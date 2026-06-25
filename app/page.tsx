@@ -18,7 +18,7 @@ export default function Home() {
             </div>
 
             <h1 className="max-w-3xl font-display text-4xl font-bold leading-tight text-ink sm:text-5xl lg:text-6xl">
-              Run your market business from one clean workspace.
+              Run your Marketplace
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-ink2 sm:text-lg">
               Manage orders, customers, products, payments, dispatch, and your
