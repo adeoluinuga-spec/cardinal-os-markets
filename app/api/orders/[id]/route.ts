@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: error.message }, { status: 404 });
   }
 
-  const [{ data: items }, { data: payments }] = await Promise.all([
+  const [{ data: items }, { data: payments }, { data: deliveries }] = await Promise.all([
     supabase
       .from("order_items")
       .select("*")
@@ -42,12 +42,19 @@ export async function GET(_request: Request, { params }: RouteContext) {
       .eq("tenant_id", normalizedTenant.id)
       .eq("order_id", params.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("deliveries")
+      .select("*")
+      .eq("tenant_id", normalizedTenant.id)
+      .eq("order_id", params.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   return NextResponse.json({
     order,
     items: items ?? [],
     payments: payments ?? [],
+    deliveries: deliveries ?? [],
     tenant: normalizedTenant,
   });
 }
