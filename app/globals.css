@@ -1,23 +1,68 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&family=Playfair+Display:wght@600;700;800&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --blue: #1A4A8B;
+  --blue-dark: #0D2E5C;
+  --blue-mid: #2558A8;
+  --blue-light: #E8EEF8;
+  --blue-pale: #F4F6FB;
+  --ink: #1A1A2E;
+  --ink2: #4A5068;
+  --ink3: #8A90A8;
+  --white: #FFFFFF;
+  --green: #2E7D52;
+  --green-light: #E8F5EE;
+  --gold: #8B6A1A;
+  --border: #D8E2F4;
+  --background: var(--blue-pale);
+  --foreground: var(--ink);
+  --font-display: "Playfair Display";
+  --font-body: "Inter";
+  --font-mono: "JetBrains Mono";
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  min-height: 100vh;
+}
+
+::selection {
+  background: var(--blue-light);
+  color: var(--blue-dark);
+}
+
+* {
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--blue-mid);
 }
 
 @layer utilities {
