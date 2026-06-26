@@ -3,6 +3,7 @@ import {
   createServerSupabaseClient,
   getCurrentUserWithTenant,
 } from "@/lib/serverAuth";
+import { encryptTenantSecret } from "@/lib/tenantPaystack";
 
 const EDITABLE_FIELDS = [
   "name",
@@ -12,6 +13,7 @@ const EDITABLE_FIELDS = [
   "city",
   "ai_persona_name",
   "logo_url",
+  "paystack_public_key",
 ] as const;
 
 const BUSINESS_TYPES = new Set([
@@ -43,6 +45,9 @@ export async function GET() {
       city: t.city,
       ai_persona_name: t.ai_persona_name,
       logo_url: t.logo_url,
+      paystack_public_key: t.paystack_public_key ?? null,
+      has_paystack_secret_key: Boolean(t.paystack_secret_key),
+      has_paystack_webhook_secret: Boolean(t.paystack_webhook_secret),
     },
   });
 }
@@ -66,6 +71,22 @@ export async function PATCH(request: Request) {
       update[field] =
         typeof value === "string" ? value.trim() || null : (value ?? null);
     }
+  }
+
+  if ("paystack_secret_key" in body) {
+    update.paystack_secret_key =
+      typeof body.paystack_secret_key === "string" &&
+      body.paystack_secret_key.trim()
+        ? encryptTenantSecret(body.paystack_secret_key)
+        : null;
+  }
+
+  if ("paystack_webhook_secret" in body) {
+    update.paystack_webhook_secret =
+      typeof body.paystack_webhook_secret === "string" &&
+      body.paystack_webhook_secret.trim()
+        ? encryptTenantSecret(body.paystack_webhook_secret)
+        : null;
   }
 
   if (

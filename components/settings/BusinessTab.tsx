@@ -36,6 +36,7 @@ type Form = {
   city: string;
   ai_persona_name: string;
   logo_url: string;
+  paystack_public_key: string;
 };
 
 const EMPTY: Form = {
@@ -46,6 +47,7 @@ const EMPTY: Form = {
   city: "",
   ai_persona_name: "Cardinal",
   logo_url: "",
+  paystack_public_key: "",
 };
 
 export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
@@ -56,6 +58,10 @@ export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [paystackSecretKey, setPaystackSecretKey] = useState("");
+  const [paystackWebhookSecret, setPaystackWebhookSecret] = useState("");
+  const [hasPaystackSecret, setHasPaystackSecret] = useState(false);
+  const [hasPaystackWebhookSecret, setHasPaystackWebhookSecret] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings/business")
@@ -71,7 +77,10 @@ export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
             city: b.city ?? "",
             ai_persona_name: b.ai_persona_name ?? "Cardinal",
             logo_url: b.logo_url ?? "",
+            paystack_public_key: b.paystack_public_key ?? "",
           });
+          setHasPaystackSecret(Boolean(b.has_paystack_secret_key));
+          setHasPaystackWebhookSecret(Boolean(b.has_paystack_webhook_secret));
         }
       })
       .finally(() => setLoading(false));
@@ -106,14 +115,26 @@ export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
     }
     setSaving(true);
     setError("");
+    const payload: Record<string, string> = { ...form };
+    if (paystackSecretKey.trim()) {
+      payload.paystack_secret_key = paystackSecretKey.trim();
+    }
+    if (paystackWebhookSecret.trim()) {
+      payload.paystack_webhook_secret = paystackWebhookSecret.trim();
+    }
+
     const res = await fetch("/api/settings/business", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
     });
     setSaving(false);
     if (res.ok) {
       onToast("Business profile saved");
+      if (paystackSecretKey.trim()) setHasPaystackSecret(true);
+      if (paystackWebhookSecret.trim()) setHasPaystackWebhookSecret(true);
+      setPaystackSecretKey("");
+      setPaystackWebhookSecret("");
       await refetchTenant();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -220,6 +241,60 @@ export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
               placeholder="Cardinal"
             />
           </label>
+        </div>
+
+        <div className="rounded-xl border border-blue-border bg-blue-pale p-4">
+          <div>
+            <h3 className="font-display text-xl font-bold text-ink">
+              Customer Paystack
+            </h3>
+            <p className="mt-1 text-sm text-ink2">
+              Used only when your customers pay you for orders. Subscription billing still uses Stuart Davidson&apos;s Paystack account.
+            </p>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="sm:col-span-2">
+              <span className="mb-1 block text-sm font-semibold text-ink2">
+                Tenant Paystack public key
+              </span>
+              <Input
+                value={form.paystack_public_key}
+                onChange={(e) =>
+                  setForm({ ...form, paystack_public_key: e.target.value })
+                }
+                placeholder="pk_live_..."
+              />
+            </label>
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-ink2">
+                Tenant Paystack secret key
+              </span>
+              <Input
+                type="password"
+                value={paystackSecretKey}
+                onChange={(e) => setPaystackSecretKey(e.target.value)}
+                placeholder={hasPaystackSecret ? "Saved - enter to replace" : "sk_live_..."}
+              />
+            </label>
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-ink2">
+                Tenant webhook secret
+              </span>
+              <Input
+                type="password"
+                value={paystackWebhookSecret}
+                onChange={(e) => setPaystackWebhookSecret(e.target.value)}
+                placeholder={
+                  hasPaystackWebhookSecret
+                    ? "Saved - enter to replace"
+                    : "Paystack webhook secret"
+                }
+              />
+            </label>
+          </div>
+          <p className="mt-3 font-mono text-[11px] text-ink3">
+            Tenant webhook URL: /api/webhooks/paystack/{tenant?.slug ?? "[tenant_slug]"}
+          </p>
         </div>
 
         {error ? (

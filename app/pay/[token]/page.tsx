@@ -25,6 +25,7 @@ type BankAccount = {
 
 type PayOrder = {
   id: string;
+  tenant_id: string;
   order_number: string;
   customer_name: string;
   customer_phone: string | null;
@@ -116,7 +117,11 @@ export default function CustomerPaymentPage({ params }: { params: { token: strin
       email,
       amount: Number(order.balance ?? 0) * 100,
       currency: "NGN",
-      metadata: { order_id: order.id, tracking_token: params.token },
+      metadata: {
+        order_id: order.id,
+        tenant_id: order.tenant_id,
+        tracking_token: params.token,
+      },
       callback: async (response: { reference: string }) => {
         const verify = await fetch(`/api/pay/${params.token}/verify`, {
           method: "POST",
@@ -226,10 +231,15 @@ export default function CustomerPaymentPage({ params }: { params: { token: strin
 
         <Card className="mt-4">
           <h2 className="font-display text-2xl font-bold text-ink">Pay with Paystack</h2>
+          {!paystackKey ? (
+            <p className="mt-2 text-sm text-ink2">
+              This business has not enabled Paystack checkout yet. Use bank transfer below.
+            </p>
+          ) : null}
           {!order.customer?.email ? (
             <Input className="mt-4" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email address" />
           ) : null}
-          <Button className="mt-4 w-full" onClick={payWithPaystack} disabled={processing || Number(order.balance ?? 0) <= 0}>
+          <Button className="mt-4 w-full" onClick={payWithPaystack} disabled={processing || !paystackKey || Number(order.balance ?? 0) <= 0}>
             Pay {money(order.balance)} with Paystack
           </Button>
         </Card>

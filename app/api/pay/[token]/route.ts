@@ -6,7 +6,7 @@ type RouteContext = { params: { token: string } };
 export async function GET(_request: Request, { params }: RouteContext) {
   const { data: order, error } = await supabaseAdmin
     .from("orders")
-    .select("*, tenant:tenants(id,name,logo_url), customer:customers(email)")
+    .select("*, tenant:tenants(id,name,logo_url,paystack_public_key), customer:customers(email)")
     .eq("tracking_token", params.token)
     .single();
 
@@ -25,6 +25,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
   return NextResponse.json({
     order,
     bankAccounts: bankAccounts ?? [],
-    paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY ?? null,
+    paystackPublicKey: order.tenant?.paystack_public_key ?? null,
   });
 }

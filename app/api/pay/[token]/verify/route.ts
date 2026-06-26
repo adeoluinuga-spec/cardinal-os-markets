@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { decryptTenantSecret } from "@/lib/tenantPaystack";
 
 type RouteContext = { params: { token: string } };
 
@@ -7,11 +8,6 @@ export async function POST(request: Request, { params }: RouteContext) {
   const { reference } = (await request.json()) as { reference?: string };
   if (!reference) {
     return NextResponse.json({ error: "Payment reference is required." }, { status: 400 });
-  }
-
-  const secret = process.env.PAYSTACK_SECRET_KEY;
-  if (!secret) {
-    return NextResponse.json({ error: "Paystack is not configured." }, { status: 500 });
   }
 
   const { data: order, error: orderError } = await supabaseAdmin
@@ -22,6 +18,27 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   if (orderError || !order) {
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
+  }
+
+  const { data: tenant, error: tenantError } = await supabaseAdmin
+    .from("tenants")
+    .select("paystack_secret_key")
+    .eq("id", order.tenant_id)
+    .single();
+
+  if (tenantError || !tenant?.paystack_secret_key) {
+    return NextResponse.json(
+      { error: "This business has not configured Paystack." },
+      { status: 500 },
+    );
+  }
+
+  const secret = decryptTenantSecret(tenant.paystack_secret_key);
+  if (!secret) {
+    return NextResponse.json(
+      { error: "This business has not configured Paystack." },
+      { status: 500 },
+    );
   }
 
   const verifyRes = await fetch(
