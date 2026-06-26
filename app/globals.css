@@ -85,3 +85,16 @@ body {
     text-wrap: balance;
   }
 }
+
+@keyframes marketing-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.marketing-marquee {
+  animation: marketing-marquee 28s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-marquee { animation: none; }
+}

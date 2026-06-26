@@ -1,0 +1,6 @@
+﻿import Link from "next/link";
+import { BrandMark } from "./MarketingNav";
+
+export default function MarketingFooter() {
+  return <footer className="bg-blue-dark text-white"><div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-[1.3fr_0.8fr_1fr]"><div><BrandMark /><p className="mt-5 max-w-xs text-sm leading-6 text-blue-light">The business operating system for African traders.</p></div><div className="grid grid-cols-2 gap-3 text-sm font-semibold text-blue-light"><Link href="/#features" className="hover:text-white">Features</Link><Link href="/pricing" className="hover:text-white">Pricing</Link><Link href="/login" className="hover:text-white">Sign in</Link><Link href="/signup" className="hover:text-white">Sign up</Link></div><div className="text-sm text-blue-light"><p className="font-semibold text-white">Built by Stuart Davidson</p><a href="https://stuartdavidson.org" target="_blank" rel="noreferrer" className="mt-2 inline-block hover:text-white">stuartdavidson.org</a></div></div><div className="border-t border-white/15 px-5 py-5 text-center font-mono text-[10px] uppercase tracking-[0.1em] text-blue-light sm:px-8">Copyright 2025 Stuart Davidson · cardinal.stuartdavidson.org · All rights reserved</div></footer>;
+}
