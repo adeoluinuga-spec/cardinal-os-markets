@@ -136,6 +136,8 @@ export default function ProductsPage() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<ProductForm>(emptyForm);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState<ProductForm>(emptyForm);
   const [adjusting, setAdjusting] = useState<{
     product: Product;
     direction: "add" | "remove";
@@ -215,6 +217,65 @@ export default function ProductsPage() {
     await fetchProducts();
   }
 
+  function openEditProduct(product: Product) {
+    setError("");
+    setEditingProduct(product);
+    setEditForm({
+      name: product.name ?? "",
+      sku: product.sku ?? "",
+      category: product.category ?? "",
+      description: product.description ?? "",
+      unit_price: product.unit_price == null ? "" : String(product.unit_price),
+      wholesale_price:
+        product.wholesale_price == null ? "" : String(product.wholesale_price),
+      cost_price: product.cost_price == null ? "" : String(product.cost_price),
+      stock_quantity:
+        product.stock_quantity == null ? "0" : String(product.stock_quantity),
+      reorder_point:
+        product.reorder_point == null ? "5" : String(product.reorder_point),
+      unit: product.unit ?? "unit",
+      image_urls: product.image_urls ?? [],
+    });
+  }
+
+  async function updateProduct(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingProduct) {
+      return;
+    }
+
+    setError("");
+    setIsSaving(true);
+    const response = await fetch(`/api/products/${editingProduct.id}/update`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: editForm.name.trim(),
+        sku: editForm.sku.trim() || null,
+        category: editForm.category.trim() || null,
+        description: editForm.description.trim() || null,
+        unit_price: Number(editForm.unit_price || 0),
+        wholesale_price: Number(editForm.wholesale_price || 0),
+        cost_price: Number(editForm.cost_price || 0),
+        stock_quantity: Number(editForm.stock_quantity || 0),
+        reorder_point: Number(editForm.reorder_point || 5),
+        unit: editForm.unit.trim() || "unit",
+        image_urls: editForm.image_urls.slice(0, 3),
+      }),
+    });
+    setIsSaving(false);
+
+    if (!response.ok) {
+      const data = (await response.json()) as { error?: string };
+      setError(data.error ?? "Unable to update product.");
+      return;
+    }
+
+    setEditingProduct(null);
+    setEditForm(emptyForm);
+    await fetchProducts();
+  }
+
   function downloadTemplate() {
     const blob = new Blob([`${csvHeaders.join(",")}\n`], {
       type: "text/csv;charset=utf-8",
@@ -261,7 +322,13 @@ export default function ProductsPage() {
           <Upload className="h-4 w-4" aria-hidden="true" />
           Import CSV
         </Button>
-        <Button onClick={() => setIsAddOpen(true)}>
+        <Button
+          onClick={() => {
+            setError("");
+            setForm(emptyForm);
+            setIsAddOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4" aria-hidden="true" />
           Add Product
         </Button>
@@ -308,6 +375,7 @@ export default function ProductsPage() {
             <ProductCard
               key={product.id}
               product={product}
+              onEdit={() => openEditProduct(product)}
               onAdjust={(direction) => setAdjusting({ product, direction })}
             />
           ))}
@@ -320,8 +388,27 @@ export default function ProductsPage() {
           setForm={setForm}
           isSaving={isSaving}
           error={error}
+          title="Add Product"
+          submitLabel="Save Product"
           onClose={() => setIsAddOpen(false)}
           onSubmit={createProduct}
+        />
+      ) : null}
+
+      {editingProduct ? (
+        <ProductModal
+          form={editForm}
+          setForm={setEditForm}
+          isSaving={isSaving}
+          error={error}
+          title="Edit Product"
+          submitLabel="Save Changes"
+          onClose={() => {
+            setEditingProduct(null);
+            setEditForm(emptyForm);
+            setError("");
+          }}
+          onSubmit={updateProduct}
         />
       ) : null}
 
@@ -363,9 +450,11 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 
 function ProductCard({
   product,
+  onEdit,
   onAdjust,
 }: {
   product: Product;
+  onEdit: () => void;
   onAdjust: (direction: "add" | "remove") => void;
 }) {
   const state = stockState(product);
@@ -428,7 +517,9 @@ function ProductCard({
         {product.stock_quantity ?? 0} {product.unit ?? "units"}
       </p>
       <div className="mt-5 grid grid-cols-3 gap-2">
-        <Button variant="ghost">Edit</Button>
+        <Button variant="ghost" onClick={onEdit}>
+          Edit
+        </Button>
         <Button variant="ghost" onClick={() => onAdjust("add")}>
           +Stock
         </Button>
@@ -445,6 +536,8 @@ function ProductModal({
   setForm,
   isSaving,
   error,
+  title,
+  submitLabel,
   onClose,
   onSubmit,
 }: {
@@ -452,6 +545,8 @@ function ProductModal({
   setForm: (form: ProductForm) => void;
   isSaving: boolean;
   error: string;
+  title: string;
+  submitLabel: string;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
@@ -497,7 +592,7 @@ function ProductModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-dark/45 p-4 backdrop-blur-sm">
       <Card className="max-h-[92vh] w-full max-w-3xl overflow-y-auto p-5">
-        <ModalHeader title="Add Product" onClose={onClose} />
+        <ModalHeader title={title} onClose={onClose} />
         <form onSubmit={onSubmit} className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field label="Product Name" className="sm:col-span-2">
             <Input
@@ -670,7 +765,7 @@ function ProductModal({
               Cancel
             </Button>
             <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Product"}
+              {isSaving ? "Saving..." : submitLabel}
             </Button>
           </div>
         </form>
