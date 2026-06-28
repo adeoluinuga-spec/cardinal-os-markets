@@ -29,9 +29,12 @@ function SignupForm() {
       email,
       password,
       options: {
+        // Stored on the auth user so /api/auth/create-tenant can provision the
+        // workspace from the verified session without trusting client input.
         data: {
           full_name: fullName,
           business_name: businessName,
+          association_slug: associationSlug || null,
         },
       },
     });
@@ -42,29 +45,27 @@ function SignupForm() {
       return;
     }
 
-    const response = await fetch("/api/auth/create-tenant", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: data.user.id,
-        fullName,
-        businessName,
-        associationSlug,
-      }),
-    });
-
-    setIsSubmitting(false);
-
-    if (!response.ok) {
-      const result = (await response.json()) as { error?: string };
-      setError(result.error ?? "Unable to create your business workspace.");
+    // If the project doesn't require email confirmation, signUp returns a live
+    // session — provision the workspace now and go straight to onboarding.
+    if (data.session) {
+      const response = await fetch("/api/auth/create-tenant", {
+        method: "POST",
+      });
+      setIsSubmitting(false);
+      if (!response.ok) {
+        const result = (await response.json()) as { error?: string };
+        setError(result.error ?? "Unable to create your business workspace.");
+        return;
+      }
+      router.replace("/onboarding");
+      router.refresh();
       return;
     }
 
-    router.replace("/onboarding");
-    router.refresh();
+    // Otherwise email confirmation is on: Supabase has emailed a code. Send the
+    // user to the verification screen to enter it.
+    setIsSubmitting(false);
+    router.replace(`/verify?email=${encodeURIComponent(email)}`);
   }
 
   return (

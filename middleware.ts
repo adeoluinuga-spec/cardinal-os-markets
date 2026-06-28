@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 const publicRoutes = [
   "/login",
   "/signup",
+  "/verify",
   "/upgrade",
   "/pay",
   "/track",
