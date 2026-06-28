@@ -137,6 +137,8 @@ export function NewOrderModal({
   const [products, setProducts] = useState<Product[]>([]);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [discount, setDiscount] = useState(0);
+  const [vatAmount, setVatAmount] = useState(0);
+  const [deliveryFee, setDeliveryFee] = useState(0);
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [expectedDeliveryAt, setExpectedDeliveryAt] = useState("");
   const [notes, setNotes] = useState("");
@@ -148,7 +150,13 @@ export function NewOrderModal({
     () => items.reduce((total, item) => total + item.quantity * item.unit_price, 0),
     [items],
   );
-  const total = Math.max(0, subtotal - Number(discount || 0));
+  const total = Math.max(
+    0,
+    subtotal -
+      Number(discount || 0) +
+      Number(vatAmount || 0) +
+      Number(deliveryFee || 0),
+  );
 
   useEffect(() => {
     if (!open || selectedCustomer) return;
@@ -199,6 +207,8 @@ export function NewOrderModal({
     setProductSearch("");
     setItems([]);
     setDiscount(0);
+    setVatAmount(0);
+    setDeliveryFee(0);
     setDeliveryAddress("");
     setExpectedDeliveryAt("");
     setNotes("");
@@ -294,6 +304,8 @@ export function NewOrderModal({
         channel,
         items,
         discount,
+        vat_amount: vatAmount,
+        delivery_fee: deliveryFee,
         delivery_address: deliveryAddress,
         expected_delivery_at: expectedDeliveryAt,
         notes,
@@ -537,7 +549,16 @@ export function NewOrderModal({
                   </div>
                 ))}
               </div>
-              <Totals subtotal={subtotal} discount={discount} total={total} onDiscount={setDiscount} />
+              <Totals
+                subtotal={subtotal}
+                discount={discount}
+                vatAmount={vatAmount}
+                deliveryFee={deliveryFee}
+                total={total}
+                onDiscount={setDiscount}
+                onVatAmount={setVatAmount}
+                onDeliveryFee={setDeliveryFee}
+              />
             </section>
           ) : null}
 
@@ -551,6 +572,16 @@ export function NewOrderModal({
                 <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.08em] text-ink2">Expected delivery date</span>
                 <input className="field min-h-12" type="date" value={expectedDeliveryAt} onChange={(event) => setExpectedDeliveryAt(event.target.value)} />
               </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.08em] text-ink2">VAT</span>
+                  <input className="field min-h-12" type="number" min={0} value={vatAmount} onChange={(event) => setVatAmount(Number(event.target.value))} placeholder="0" />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.08em] text-ink2">Delivery fee</span>
+                  <input className="field min-h-12" type="number" min={0} value={deliveryFee} onChange={(event) => setDeliveryFee(Number(event.target.value))} placeholder="0" />
+                </label>
+              </div>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.08em] text-ink2">Notes</span>
                 <textarea className="field min-h-28 py-3" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Internal notes, delivery instructions, or special terms" />
@@ -576,7 +607,14 @@ export function NewOrderModal({
                   </div>
                 ))}
               </div>
-              <Totals subtotal={subtotal} discount={discount} total={total} readOnly />
+              <Totals
+                subtotal={subtotal}
+                discount={discount}
+                vatAmount={vatAmount}
+                deliveryFee={deliveryFee}
+                total={total}
+                readOnly
+              />
             </section>
           ) : null}
 
@@ -679,14 +717,22 @@ function HealthDot({ score }: { score: number }) {
 function Totals({
   subtotal,
   discount,
+  vatAmount,
+  deliveryFee,
   total,
   onDiscount,
+  onVatAmount,
+  onDeliveryFee,
   readOnly,
 }: {
   subtotal: number;
   discount: number;
+  vatAmount: number;
+  deliveryFee: number;
   total: number;
   onDiscount?: (value: number) => void;
+  onVatAmount?: (value: number) => void;
+  onDeliveryFee?: (value: number) => void;
   readOnly?: boolean;
 }) {
   return (
@@ -705,6 +751,34 @@ function Totals({
             min={0}
             value={discount}
             onChange={(event) => onDiscount?.(Number(event.target.value))}
+            className="h-10 w-32 rounded-lg border border-blue-border bg-blue-pale px-3 text-right font-mono text-sm outline-none focus:border-blue-primary"
+          />
+        )}
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3 text-sm text-ink2">
+        <span>VAT</span>
+        {readOnly ? (
+          <span className="font-mono">{formatCurrency(vatAmount)}</span>
+        ) : (
+          <input
+            type="number"
+            min={0}
+            value={vatAmount}
+            onChange={(event) => onVatAmount?.(Number(event.target.value))}
+            className="h-10 w-32 rounded-lg border border-blue-border bg-blue-pale px-3 text-right font-mono text-sm outline-none focus:border-blue-primary"
+          />
+        )}
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3 text-sm text-ink2">
+        <span>Delivery fee</span>
+        {readOnly ? (
+          <span className="font-mono">{formatCurrency(deliveryFee)}</span>
+        ) : (
+          <input
+            type="number"
+            min={0}
+            value={deliveryFee}
+            onChange={(event) => onDeliveryFee?.(Number(event.target.value))}
             className="h-10 w-32 rounded-lg border border-blue-border bg-blue-pale px-3 text-right font-mono text-sm outline-none focus:border-blue-primary"
           />
         )}

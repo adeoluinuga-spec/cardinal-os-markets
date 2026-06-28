@@ -19,6 +19,8 @@ type CreateOrderBody = {
   channel: string;
   items: OrderItemInput[];
   discount?: number;
+  vat_amount?: number;
+  delivery_fee?: number;
   delivery_address?: string;
   expected_delivery_at?: string;
   notes?: string;
@@ -88,7 +90,9 @@ export async function POST(request: Request) {
     0,
   );
   const discount = Number(body.discount ?? 0);
-  const total = Math.max(0, subtotal - discount);
+  const vatAmount = Number(body.vat_amount ?? 0);
+  const deliveryFee = Number(body.delivery_fee ?? 0);
+  const total = Math.max(0, subtotal - discount + vatAmount + deliveryFee);
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -103,6 +107,8 @@ export async function POST(request: Request) {
       payment_status: "unpaid",
       subtotal,
       discount,
+      vat_amount: vatAmount,
+      delivery_fee: deliveryFee,
       total,
       amount_paid: 0,
       balance: total,
