@@ -494,7 +494,9 @@ export function NewOrderModal({
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-ink">{item.product_name}</p>
-                        <p className="mt-0.5 font-mono text-xs text-ink3">Stock {item.stock_quantity}</p>
+                        <p className="mt-0.5 font-mono text-xs text-ink3">
+                          Stock {item.stock_quantity} · Saved retail price {formatCurrency(item.unit_price)}
+                        </p>
                       </div>
                       <button
                         type="button"
@@ -505,11 +507,31 @@ export function NewOrderModal({
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                    <div className="mt-3 grid grid-cols-[88px_1fr_1fr] gap-2">
-                      <input className="field" type="number" min={1} value={item.quantity} onChange={(event) => setItems((current) => current.map((row) => row.product_id === item.product_id ? { ...row, quantity: Number(event.target.value) } : row))} />
-                      <input className="field" type="number" min={0} value={item.unit_price} onChange={(event) => setItems((current) => current.map((row) => row.product_id === item.product_id ? { ...row, unit_price: Number(event.target.value) } : row))} />
-                      <div className="flex items-center justify-end rounded-lg bg-blue-pale px-3 font-mono text-sm font-bold text-ink">
-                        {formatCurrency(item.quantity * item.unit_price)}
+                    {item.unit_price <= 0 ? (
+                      <p className="mt-3 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700">
+                        No retail price is saved for this product yet. Enter the unit price for this order.
+                      </p>
+                    ) : null}
+                    <div className="mt-3 grid gap-2 sm:grid-cols-[96px_1fr_1fr]">
+                      <label>
+                        <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-ink3">
+                          Qty
+                        </span>
+                        <input className="field" type="number" min={1} value={item.quantity} onChange={(event) => setItems((current) => current.map((row) => row.product_id === item.product_id ? { ...row, quantity: Number(event.target.value) } : row))} />
+                      </label>
+                      <label>
+                        <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-ink3">
+                          Unit price
+                        </span>
+                        <input className="field" type="number" min={0} value={item.unit_price} onChange={(event) => setItems((current) => current.map((row) => row.product_id === item.product_id ? { ...row, unit_price: Number(event.target.value) } : row))} />
+                      </label>
+                      <div>
+                        <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-ink3">
+                          Line total
+                        </span>
+                        <div className="flex min-h-10 items-center justify-end rounded-lg bg-blue-pale px-3 font-mono text-sm font-bold text-ink">
+                          {formatCurrency(item.quantity * item.unit_price)}
+                        </div>
                       </div>
                     </div>
                   </div>
