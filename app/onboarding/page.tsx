@@ -68,7 +68,6 @@ export default function OnboardingPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [step, setStep] = useState(1);
   const [tenant, setTenant] = useState<Tenant | null>(null);
-  const [userId, setUserId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -100,8 +99,6 @@ export default function OnboardingPage() {
         router.replace("/login");
         return;
       }
-
-      setUserId(user.id);
 
       const { data: tenantUser, error: tenantError } = await supabase
         .from("tenant_users")
@@ -265,17 +262,22 @@ export default function OnboardingPage() {
       return true;
     }
 
-    const response = await fetch("/api/team/invite", {
+    const email = inviteEmail.trim();
+    // The secure invite route derives the tenant and inviter from the
+    // authenticated session, so we only send the invitee's details. It
+    // requires a full_name; fall back to the email's local-part since
+    // onboarding doesn't collect a separate name for the invitee.
+    const fullName = email.split("@")[0] || email;
+
+    const response = await fetch("/api/settings/team/invite", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        tenantId: tenant.id,
-        email: inviteEmail.trim(),
+        full_name: fullName,
+        email,
         role: inviteRole,
-        invitedBy: userId,
-        businessName,
       }),
     });
 
