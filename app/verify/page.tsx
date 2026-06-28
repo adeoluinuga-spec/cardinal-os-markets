@@ -17,7 +17,7 @@ import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
-const CODE_LENGTH = 6;
+const CODE_LENGTH = 8;
 
 function VerifyForm() {
   const router = useRouter();
@@ -186,7 +186,7 @@ function VerifyForm() {
             Verify your email
           </h1>
           <p className="mt-2 text-sm text-ink2">
-            We sent a 6-digit code to{" "}
+            We sent an {CODE_LENGTH}-digit code to{" "}
             <span className="font-semibold text-ink">
               {email || "your email"}
             </span>
@@ -196,7 +196,7 @@ function VerifyForm() {
 
         <Card className="p-6">
           <div
-            className="flex justify-between gap-2"
+            className="flex justify-between gap-1.5 sm:gap-2"
             role="group"
             aria-label="Verification code"
           >
@@ -218,7 +218,7 @@ function VerifyForm() {
                 onPaste={handlePaste}
                 aria-label={`Digit ${index + 1}`}
                 className={cn(
-                  "h-14 w-full rounded-xl border bg-blue-pale text-center font-display text-2xl font-bold text-ink outline-none transition",
+                  "h-12 w-full min-w-0 rounded-lg border bg-blue-pale text-center font-display text-lg font-bold text-ink outline-none transition sm:h-14 sm:rounded-xl sm:text-2xl",
                   "focus:border-blue-primary focus:bg-white focus:ring-2 focus:ring-blue-light",
                   "disabled:cursor-not-allowed disabled:opacity-60",
                   digit ? "border-blue-primary bg-white" : "border-blue-border",
