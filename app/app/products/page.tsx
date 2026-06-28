@@ -8,7 +8,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { Download, PackageOpen, Plus, Search, Upload, X } from "lucide-react";
+import { Download, ImagePlus, PackageOpen, Plus, Search, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -31,6 +31,7 @@ type Product = {
   stock_quantity: number | null;
   reorder_point: number | null;
   unit: string | null;
+  image_urls?: string[] | null;
 };
 
 type ProductForm = {
@@ -44,6 +45,7 @@ type ProductForm = {
   stock_quantity: string;
   reorder_point: string;
   unit: string;
+  image_urls: string[];
 };
 
 type ImportRow = Record<string, string>;
@@ -59,6 +61,7 @@ const emptyForm: ProductForm = {
   stock_quantity: "0",
   reorder_point: "5",
   unit: "unit",
+  image_urls: [],
 };
 
 const csvHeaders = [
@@ -366,9 +369,23 @@ function ProductCard({
   onAdjust: (direction: "add" | "remove") => void;
 }) {
   const state = stockState(product);
+  const images = product.image_urls ?? [];
 
   return (
     <Card className="p-5">
+      <div className="mb-4 overflow-hidden rounded-xl border border-blue-border bg-blue-pale">
+        {images[0] ? (
+          <img
+            src={images[0]}
+            alt={product.name}
+            className="aspect-[4/3] w-full object-cover"
+          />
+        ) : (
+          <div className="flex aspect-[4/3] items-center justify-center text-blue-primary">
+            <PackageOpen className="h-8 w-8" aria-hidden="true" />
+          </div>
+        )}
+      </div>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-ink">{product.name}</h2>
@@ -378,6 +395,18 @@ function ProductCard({
         </div>
         {product.category ? <Badge variant="blue">{product.category}</Badge> : null}
       </div>
+      {images.length > 1 ? (
+        <div className="mt-3 flex gap-2">
+          {images.slice(0, 3).map((url) => (
+            <img
+              key={url}
+              src={url}
+              alt=""
+              className="h-12 w-12 rounded-lg border border-blue-border object-cover"
+            />
+          ))}
+        </div>
+      ) : null}
       <div
         className={cn(
           "mt-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold",
@@ -426,6 +455,45 @@ function ProductModal({
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [imageError, setImageError] = useState("");
+
+  async function uploadImages(files: FileList | null) {
+    if (!files?.length) {
+      return;
+    }
+
+    setImageError("");
+    const remainingSlots = Math.max(0, 3 - form.image_urls.length);
+    const selectedFiles = Array.from(files).slice(0, remainingSlots);
+
+    if (!selectedFiles.length) {
+      setImageError("You can add up to 3 product images.");
+      return;
+    }
+
+    const payload = new FormData();
+    selectedFiles.forEach((file) => payload.append("images", file));
+
+    setIsUploadingImages(true);
+    const response = await fetch("/api/products/upload-image", {
+      method: "POST",
+      body: payload,
+    });
+    setIsUploadingImages(false);
+
+    const data = (await response.json()) as { urls?: string[]; error?: string };
+    if (!response.ok) {
+      setImageError(data.error ?? "Unable to upload product images.");
+      return;
+    }
+
+    setForm({
+      ...form,
+      image_urls: [...form.image_urls, ...(data.urls ?? [])].slice(0, 3),
+    });
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-dark/45 p-4 backdrop-blur-sm">
       <Card className="max-h-[92vh] w-full max-w-3xl overflow-y-auto p-5">
@@ -462,6 +530,78 @@ function ProductModal({
               className="min-h-24 w-full rounded-lg border border-blue-border bg-blue-pale px-3 py-2 text-sm text-ink outline-none focus:border-blue-primary focus:bg-white focus:ring-2 focus:ring-blue-light"
             />
           </Field>
+          <div className="sm:col-span-2">
+            <span className="mb-2 block text-sm font-semibold text-ink2">
+              Product Images
+            </span>
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+              <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-blue-border bg-blue-pale px-4 py-5 text-center transition hover:border-blue-primary hover:bg-blue-light">
+                <ImagePlus className="h-6 w-6 text-blue-primary" aria-hidden="true" />
+                <span className="mt-2 text-sm font-semibold text-ink">
+                  Upload up to 3 images
+                </span>
+                <span className="mt-1 text-xs text-ink3">
+                  JPG, PNG, WEBP, or GIF
+                </span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  multiple
+                  className="hidden"
+                  disabled={form.image_urls.length >= 3 || isUploadingImages}
+                  onChange={(event) => void uploadImages(event.target.files)}
+                />
+              </label>
+              <div className="grid grid-cols-3 gap-2 sm:w-48">
+                {[0, 1, 2].map((slot) => {
+                  const url = form.image_urls[slot];
+                  return (
+                    <div
+                      key={slot}
+                      className="relative aspect-square overflow-hidden rounded-xl border border-blue-border bg-white"
+                    >
+                      {url ? (
+                        <>
+                          <img
+                            src={url}
+                            alt={`Product image ${slot + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setForm({
+                                ...form,
+                                image_urls: form.image_urls.filter(
+                                  (item) => item !== url,
+                                ),
+                              })
+                            }
+                            className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-blue-dark/80 text-white"
+                            aria-label="Remove image"
+                          >
+                            <X className="h-3 w-3" aria-hidden="true" />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-xs font-semibold text-ink3">
+                          {slot + 1}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {isUploadingImages ? (
+              <p className="mt-2 text-xs font-semibold text-blue-primary">
+                Uploading images...
+              </p>
+            ) : null}
+            {imageError ? (
+              <p className="mt-2 text-xs font-semibold text-red-700">{imageError}</p>
+            ) : null}
+          </div>
           <Field label="Retail Price">
             <Input
               type="number"

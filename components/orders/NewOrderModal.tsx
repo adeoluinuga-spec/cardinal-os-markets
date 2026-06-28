@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  Globe,
   Camera,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Globe,
   MessageCircle,
   Monitor,
   Phone,
@@ -13,14 +16,16 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 
 type Customer = {
   id: string;
   full_name: string;
   phone: string | null;
+  email?: string | null;
+  city?: string | null;
+  customer_type?: string | null;
+  health_score?: number | null;
 };
 
 type Product = {
@@ -29,6 +34,7 @@ type Product = {
   sku: string | null;
   unit_price: number | null;
   stock_quantity: number | null;
+  image_urls?: string[] | null;
 };
 
 type OrderItem = {
@@ -37,15 +43,20 @@ type OrderItem = {
   quantity: number;
   unit_price: number;
   stock_quantity: number;
+  image_url?: string | null;
 };
 
+type Step = 1 | 2 | 3 | 4 | 5 | "success";
+
+const steps = ["Customer", "Channel", "Products", "Delivery", "Review"];
+
 const channels = [
-  { label: "WhatsApp", value: "whatsapp", icon: MessageCircle },
-  { label: "Walk-in", value: "walk_in", icon: Store },
-  { label: "Phone", value: "phone", icon: Phone },
-  { label: "Instagram", value: "instagram", icon: Camera },
-  { label: "Website", value: "website", icon: Globe },
-  { label: "Manual", value: "manual", icon: Monitor },
+  { label: "WhatsApp", value: "whatsapp", icon: MessageCircle, color: "#2E7D52" },
+  { label: "Walk-in", value: "walk_in", icon: Store, color: "#1A4A8B" },
+  { label: "Phone", value: "phone", icon: Phone, color: "#2558A8" },
+  { label: "Instagram", value: "instagram", icon: Camera, color: "#C13584" },
+  { label: "Website", value: "website", icon: Globe, color: "#6D5BD0" },
+  { label: "Manual", value: "manual", icon: Monitor, color: "#4A5068" },
 ];
 
 function formatCurrency(value: number) {
@@ -54,6 +65,51 @@ function formatCurrency(value: number) {
     currency: "NGN",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function StepBar({ step }: { step: Step }) {
+  const numeric = typeof step === "number" ? step : 5;
+  return (
+    <div className="mb-6 flex items-center">
+      {steps.map((label, index) => {
+        const position = index + 1;
+        const done = numeric > position;
+        const active = numeric === position;
+        return (
+          <div key={label} className="flex flex-1 items-center last:flex-none">
+            <div className="flex flex-col items-center gap-1.5">
+              <div
+                className={cn(
+                  "grid h-7 w-7 place-items-center rounded-full text-[11px] font-bold transition",
+                  done && "bg-blue-primary text-white",
+                  active && "bg-white text-blue-primary ring-4 ring-blue-light",
+                  !done && !active && "bg-blue-border text-ink3",
+                )}
+              >
+                {done ? <Check className="h-3.5 w-3.5" /> : position}
+              </div>
+              <span
+                className={cn(
+                  "hidden whitespace-nowrap font-mono text-[10px] font-bold uppercase tracking-[0.08em] sm:block",
+                  active || done ? "text-ink" : "text-ink3",
+                )}
+              >
+                {label}
+              </span>
+            </div>
+            {index < steps.length - 1 ? (
+              <div
+                className={cn(
+                  "mx-2 mb-4 h-px flex-1",
+                  numeric > position ? "bg-blue-primary" : "bg-blue-border",
+                )}
+              />
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function NewOrderModal({
@@ -65,13 +121,18 @@ export function NewOrderModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<Step>(1);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showNewCustomer, setShowNewCustomer] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ full_name: "", phone: "" });
-  const [channel, setChannel] = useState("manual");
+  const [newCustomer, setNewCustomer] = useState({
+    full_name: "",
+    phone: "",
+    email: "",
+    city: "",
+  });
+  const [channel, setChannel] = useState("whatsapp");
   const [productSearch, setProductSearch] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -80,59 +141,17 @@ export function NewOrderModal({
   const [expectedDeliveryAt, setExpectedDeliveryAt] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
+  const [createdOrderNumber, setCreatedOrderNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const subtotal = useMemo(
-    () =>
-      items.reduce(
-        (total, item) => total + Number(item.quantity) * Number(item.unit_price),
-        0,
-      ),
+    () => items.reduce((total, item) => total + item.quantity * item.unit_price, 0),
     [items],
   );
   const total = Math.max(0, subtotal - Number(discount || 0));
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const storedDraft = window.sessionStorage.getItem("cardinal-autopilot-draft");
-    if (storedDraft) {
-      try {
-        const draft = JSON.parse(storedDraft) as {
-          customer_name?: string;
-          customer_phone?: string;
-          delivery_address?: string;
-          delivery_date?: string | null;
-          items?: { product_name: string; quantity: number; notes?: string }[];
-          notes?: string;
-        };
-        setCustomerSearch(draft.customer_name ?? "");
-        setNewCustomer({
-          full_name: draft.customer_name ?? "",
-          phone: draft.customer_phone ?? "",
-        });
-        setShowNewCustomer(Boolean(draft.customer_name));
-        setDeliveryAddress(draft.delivery_address ?? "");
-        setExpectedDeliveryAt(draft.delivery_date ?? "");
-        setNotes(
-          [
-            draft.notes,
-            draft.items?.length
-              ? `Autopilot draft items: ${draft.items
-                  .map((item) => `${item.quantity} x ${item.product_name}`)
-                  .join(", ")}`
-              : "",
-          ]
-            .filter(Boolean)
-            .join("\n"),
-        );
-        window.sessionStorage.removeItem("cardinal-autopilot-draft");
-      } catch {
-        window.sessionStorage.removeItem("cardinal-autopilot-draft");
-      }
-    }
+    if (!open || selectedCustomer) return;
 
     const timeout = window.setTimeout(async () => {
       const response = await fetch(
@@ -142,17 +161,15 @@ export function NewOrderModal({
 
       if (response.ok) {
         const data = (await response.json()) as { customers: Customer[] };
-        setCustomers(data.customers.slice(0, 6));
+        setCustomers(data.customers.slice(0, 7));
       }
-    }, 200);
+    }, 220);
 
     return () => window.clearTimeout(timeout);
-  }, [customerSearch, open]);
+  }, [customerSearch, open, selectedCustomer]);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
     const timeout = window.setTimeout(async () => {
       const response = await fetch(
@@ -162,27 +179,31 @@ export function NewOrderModal({
 
       if (response.ok) {
         const data = (await response.json()) as { products: Product[] };
-        setProducts(data.products);
+        setProducts(data.products.slice(0, 8));
       }
-    }, 200);
+    }, 220);
 
     return () => window.clearTimeout(timeout);
   }, [open, productSearch]);
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   function resetAndClose() {
     setStep(1);
-    setSelectedCustomer(null);
     setCustomerSearch("");
+    setCustomers([]);
+    setSelectedCustomer(null);
+    setShowNewCustomer(false);
+    setNewCustomer({ full_name: "", phone: "", email: "", city: "" });
+    setChannel("whatsapp");
+    setProductSearch("");
     setItems([]);
     setDiscount(0);
     setDeliveryAddress("");
     setExpectedDeliveryAt("");
     setNotes("");
     setError("");
+    setCreatedOrderNumber("");
     onClose();
   }
 
@@ -195,26 +216,26 @@ export function NewOrderModal({
       body: JSON.stringify({
         full_name: newCustomer.full_name,
         phone: newCustomer.phone,
+        email: newCustomer.email,
+        city: newCustomer.city,
         customer_type: "retail",
       }),
     });
 
-    if (!response.ok) {
-      const data = (await response.json()) as { error?: string };
+    const data = (await response.json()) as { customer?: Customer; error?: string };
+    if (!response.ok || !data.customer) {
       setError(data.error ?? "Unable to create customer.");
       return;
     }
 
-    const data = (await response.json()) as { customer: Customer };
     setSelectedCustomer(data.customer);
     setCustomerSearch(data.customer.full_name);
     setShowNewCustomer(false);
+    setStep(2);
   }
 
   function addProduct(product: Product) {
-    if (items.some((item) => item.product_id === product.id)) {
-      return;
-    }
+    if (items.some((item) => item.product_id === product.id)) return;
 
     setItems((current) => [
       ...current,
@@ -224,26 +245,44 @@ export function NewOrderModal({
         quantity: 1,
         unit_price: Number(product.unit_price ?? 0),
         stock_quantity: Number(product.stock_quantity ?? 0),
+        image_url: product.image_urls?.[0] ?? null,
       },
     ]);
     setProductSearch("");
   }
 
-  async function submitOrder() {
+  function canAdvance() {
+    if (step === 1) return Boolean(selectedCustomer);
+    if (step === 2) return Boolean(channel);
+    if (step === 3) return items.length > 0;
+    if (step === 4) return true;
+    return false;
+  }
+
+  function advance() {
     setError("");
-
-    if (!selectedCustomer) {
-      setStep(1);
-      setError("Select or create a customer first.");
+    if (!canAdvance()) {
+      if (step === 1) setError("Select or create a customer first.");
+      if (step === 3) setError("Add at least one product.");
       return;
     }
+    if (step === 1) setStep(2);
+    if (step === 2) setStep(3);
+    if (step === 3) setStep(4);
+    if (step === 4) setStep(5);
+  }
 
-    if (items.length === 0) {
-      setStep(3);
-      setError("Add at least one product.");
-      return;
-    }
+  function back() {
+    setError("");
+    if (step === 2) setStep(1);
+    if (step === 3) setStep(2);
+    if (step === 4) setStep(3);
+    if (step === 5) setStep(4);
+  }
 
+  async function submitOrder() {
+    if (!selectedCustomer || items.length === 0) return;
+    setError("");
     setIsSubmitting(true);
     const response = await fetch("/api/orders/create", {
       method: "POST",
@@ -262,326 +301,395 @@ export function NewOrderModal({
     });
     setIsSubmitting(false);
 
+    const data = (await response.json()) as {
+      order?: { order_number?: string };
+      error?: string;
+    };
     if (!response.ok) {
-      const data = (await response.json()) as { error?: string };
       setError(data.error ?? "Unable to create order.");
       return;
     }
 
+    setCreatedOrderNumber(data.order?.order_number ?? "Order created");
+    setStep("success");
     onCreated();
-    resetAndClose();
   }
 
+  const selectedChannel = channels.find((item) => item.value === channel);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-blue-dark/50 p-0 backdrop-blur-sm md:items-center md:p-6">
-      <div className="flex h-full w-full max-w-4xl flex-col overflow-hidden bg-white shadow-2xl md:h-auto md:max-h-[92vh] md:rounded-xl">
-        <div className="flex items-center justify-between border-b border-blue-border px-5 py-4">
-          <div>
-            <p className="font-mono text-xs font-bold uppercase tracking-wide text-blue-primary">
-              Step {step} of 4
-            </p>
-            <h2 className="font-display text-2xl font-bold text-ink">
-              New Order
-            </h2>
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+      <div className="absolute inset-0 bg-blue-dark/60 backdrop-blur-sm" onClick={resetAndClose} />
+      <div className="relative z-10 flex max-h-[96vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-w-2xl sm:rounded-2xl">
+        {step !== "success" ? (
+          <div className="flex items-center justify-between border-b border-blue-border px-4 py-4 sm:px-6">
+            <div>
+              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-blue-primary">
+                Step {step} of 5
+              </p>
+              <h2 className="font-display text-2xl font-bold text-ink">New Order</h2>
+            </div>
+            <button
+              type="button"
+              onClick={resetAndClose}
+              className="grid h-10 w-10 place-items-center rounded-lg text-ink2 hover:bg-blue-pale"
+              aria-label="Close new order modal"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={resetAndClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink2 hover:bg-blue-pale"
-            aria-label="Close new order modal"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
+        ) : null}
 
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+          {step !== "success" ? <StepBar step={step} /> : null}
+
           {step === 1 ? (
-            <section>
-              <h3 className="font-display text-xl font-bold text-ink">
-                Customer
-              </h3>
-              <div className="relative mt-4">
-                <Search className="absolute left-3 top-3.5 h-4 w-4 text-ink3" />
-                <Input
-                  value={customerSearch}
-                  onChange={(event) => setCustomerSearch(event.target.value)}
-                  placeholder="Search customer by name or phone"
-                  className="pl-9"
+            <section className="space-y-4">
+              {selectedCustomer ? (
+                <SelectedCustomerCard
+                  customer={selectedCustomer}
+                  onChange={() => setSelectedCustomer(null)}
                 />
-                <div className="mt-2 overflow-hidden rounded-xl border border-blue-border bg-white">
-                  {customers.map((customer) => (
+              ) : (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3" />
+                    <input
+                      autoFocus
+                      value={customerSearch}
+                      onChange={(event) => setCustomerSearch(event.target.value)}
+                      placeholder="Search customer by name or phone"
+                      className="min-h-12 w-full rounded-xl border border-blue-border bg-white pl-10 pr-4 text-sm outline-none focus:border-blue-primary focus:ring-4 focus:ring-blue-light"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    {customers.map((customer) => (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCustomer(customer);
+                          setCustomerSearch(customer.full_name);
+                          setStep(2);
+                        }}
+                        className="flex w-full items-center gap-3 rounded-xl border border-blue-border bg-white p-4 text-left transition hover:bg-blue-pale"
+                      >
+                        <HealthDot score={customer.health_score ?? 50} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-ink">{customer.full_name}</p>
+                          <p className="mt-0.5 text-xs text-ink3">
+                            {[customer.city, customer.phone, customer.email].filter(Boolean).join(" · ") || "No contact details"}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-ink3" />
+                      </button>
+                    ))}
+                  </div>
+                  {!showNewCustomer ? (
                     <button
-                      key={customer.id}
                       type="button"
-                      onClick={() => {
-                        setSelectedCustomer(customer);
-                        setCustomerSearch(customer.full_name);
-                      }}
-                      className={cn(
-                        "block w-full px-4 py-3 text-left text-sm hover:bg-blue-pale",
-                        selectedCustomer?.id === customer.id && "bg-blue-light",
-                      )}
+                      onClick={() => setShowNewCustomer(true)}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-border py-3 text-sm font-bold text-blue-primary transition hover:bg-blue-pale"
                     >
-                      <span className="font-semibold text-ink">
-                        {customer.full_name}
-                      </span>
-                      <span className="ml-2 text-ink3">
-                        {customer.phone ?? ""}
-                      </span>
+                      <Plus className="h-4 w-4" />
+                      New Customer
                     </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setShowNewCustomer(true)}
-                    className="flex w-full items-center gap-2 border-t border-blue-border px-4 py-3 text-left text-sm font-semibold text-blue-primary hover:bg-blue-pale"
-                  >
-                    <Plus className="h-4 w-4" aria-hidden="true" />
-                    New Customer
-                  </button>
-                </div>
-              </div>
-
-              {showNewCustomer ? (
-                <form
-                  onSubmit={createInlineCustomer}
-                  className="mt-4 grid gap-3 rounded-xl border border-blue-border bg-blue-pale p-4 sm:grid-cols-[1fr_160px_auto]"
-                >
-                  <Input
-                    value={newCustomer.full_name}
-                    onChange={(event) =>
-                      setNewCustomer({
-                        ...newCustomer,
-                        full_name: event.target.value,
-                      })
-                    }
-                    placeholder="Customer name"
-                    required
-                  />
-                  <Input
-                    value={newCustomer.phone}
-                    onChange={(event) =>
-                      setNewCustomer({ ...newCustomer, phone: event.target.value })
-                    }
-                    placeholder="Phone"
-                  />
-                  <Button type="submit">Create</Button>
-                </form>
-              ) : null}
+                  ) : (
+                    <form
+                      onSubmit={createInlineCustomer}
+                      className="rounded-xl border border-blue-border bg-blue-pale p-4"
+                    >
+                      <p className="mb-3 text-sm font-bold text-ink">New Customer</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <input className="field" required placeholder="Full name" value={newCustomer.full_name} onChange={(event) => setNewCustomer({ ...newCustomer, full_name: event.target.value })} />
+                        <input className="field" placeholder="Phone" value={newCustomer.phone} onChange={(event) => setNewCustomer({ ...newCustomer, phone: event.target.value })} />
+                        <input className="field" type="email" placeholder="Email" value={newCustomer.email} onChange={(event) => setNewCustomer({ ...newCustomer, email: event.target.value })} />
+                        <input className="field" placeholder="City" value={newCustomer.city} onChange={(event) => setNewCustomer({ ...newCustomer, city: event.target.value })} />
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button type="button" onClick={() => setShowNewCustomer(false)} className="secondary-action flex-1">Cancel</button>
+                        <button type="submit" className="primary-action flex-1">Save & Select</button>
+                      </div>
+                    </form>
+                  )}
+                </>
+              )}
             </section>
           ) : null}
 
           {step === 2 ? (
-            <section>
-              <h3 className="font-display text-xl font-bold text-ink">
-                Channel
-              </h3>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {channels.map((item) => {
-                  const Icon = item.icon;
-                  const selected = channel === item.value;
-
-                  return (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => setChannel(item.value)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-xl border border-blue-border p-4 text-left font-semibold transition",
-                        selected
-                          ? "border-blue-primary bg-blue-primary text-white"
-                          : "bg-blue-pale text-ink hover:bg-blue-light",
-                      )}
+            <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {channels.map((item) => {
+                const Icon = item.icon;
+                const active = channel === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setChannel(item.value)}
+                    className={cn(
+                      "flex flex-col items-center gap-3 rounded-2xl border-2 bg-white py-6 transition active:scale-95",
+                      active ? "border-blue-primary shadow-sm" : "border-blue-border hover:bg-blue-pale",
+                    )}
+                    style={{ boxShadow: active ? `0 0 0 4px ${item.color}18` : undefined }}
+                  >
+                    <span
+                      className="grid h-11 w-11 place-items-center rounded-xl text-white"
+                      style={{ background: active ? item.color : "#CAD8EC", color: active ? "#fff" : "#414A63" }}
                     >
-                      <Icon className="h-5 w-5" aria-hidden="true" />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="text-sm font-bold text-ink">{item.label}</span>
+                  </button>
+                );
+              })}
             </section>
           ) : null}
 
           {step === 3 ? (
-            <section>
-              <h3 className="font-display text-xl font-bold text-ink">
-                Order Items
-              </h3>
-              <div className="relative mt-4">
-                <Search className="absolute left-3 top-3.5 h-4 w-4 text-ink3" />
-                <Input
+            <section className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3" />
+                <input
                   value={productSearch}
                   onChange={(event) => setProductSearch(event.target.value)}
                   placeholder="Search products by name or SKU"
-                  className="pl-9"
+                  className="min-h-12 w-full rounded-xl border border-blue-border bg-white pl-10 pr-4 text-sm outline-none focus:border-blue-primary focus:ring-4 focus:ring-blue-light"
                 />
                 {productSearch ? (
-                  <div className="absolute z-10 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border border-blue-border bg-white shadow-lg">
+                  <div className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-xl border border-blue-border bg-white shadow-xl">
                     {products.map((product) => (
                       <button
                         key={product.id}
                         type="button"
                         onClick={() => addProduct(product)}
-                        className="block w-full px-4 py-3 text-left text-sm hover:bg-blue-pale"
+                        className="flex w-full items-center gap-3 border-b border-blue-border px-4 py-3 text-left last:border-b-0 hover:bg-blue-pale"
                       >
-                        <span className="font-semibold text-ink">
-                          {product.name}
+                        {product.image_urls?.[0] ? (
+                          <img src={product.image_urls[0]} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                        ) : (
+                          <span className="grid h-10 w-10 place-items-center rounded-lg bg-blue-pale text-xs font-bold text-blue-primary">SKU</span>
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-ink">{product.name}</span>
+                          <span className="block font-mono text-xs text-ink3">
+                            {product.sku ?? "No SKU"} · Stock {product.stock_quantity ?? 0}
+                          </span>
                         </span>
-                        <span className="ml-2 text-ink3">
-                          {product.sku ?? ""} · Stock {product.stock_quantity ?? 0}
-                        </span>
+                        <span className="font-mono text-xs font-bold text-blue-primary">{formatCurrency(Number(product.unit_price ?? 0))}</span>
                       </button>
                     ))}
                   </div>
                 ) : null}
               </div>
 
-              <div className="mt-5 space-y-3">
+              <div className="space-y-3">
                 {items.map((item) => (
-                  <div
-                    key={item.product_id}
-                    className="grid gap-3 rounded-xl border border-blue-border bg-blue-pale p-3 md:grid-cols-[1fr_90px_120px_120px_40px]"
-                  >
-                    <p className="self-center text-sm font-semibold text-ink">
-                      {item.product_name}
-                      {item.quantity > item.stock_quantity ? (
-                        <span className="ml-2 rounded-full bg-orange-50 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-orange-700">
-                          Back-order
-                        </span>
-                      ) : null}
-                    </p>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(event) =>
-                        setItems((current) =>
-                          current.map((row) =>
-                            row.product_id === item.product_id
-                              ? { ...row, quantity: Number(event.target.value) }
-                              : row,
-                          ),
-                        )
-                      }
-                    />
-                    <Input
-                      type="number"
-                      min={0}
-                      value={item.unit_price}
-                      onChange={(event) =>
-                        setItems((current) =>
-                          current.map((row) =>
-                            row.product_id === item.product_id
-                              ? { ...row, unit_price: Number(event.target.value) }
-                              : row,
-                          ),
-                        )
-                      }
-                    />
-                    <p className="self-center font-semibold text-ink">
-                      {formatCurrency(item.quantity * item.unit_price)}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setItems((current) =>
-                          current.filter(
-                            (row) => row.product_id !== item.product_id,
-                          ),
-                        )
-                      }
-                      className="flex h-10 items-center justify-center rounded-lg text-red-600 hover:bg-red-50"
-                      aria-label="Remove item"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    </button>
+                  <div key={item.product_id} className="rounded-xl border border-blue-border bg-white p-3">
+                    <div className="flex gap-3">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                      ) : (
+                        <div className="grid h-14 w-14 place-items-center rounded-lg bg-blue-pale text-xs font-bold text-blue-primary">Item</div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-ink">{item.product_name}</p>
+                        <p className="mt-0.5 font-mono text-xs text-ink3">Stock {item.stock_quantity}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setItems((current) => current.filter((row) => row.product_id !== item.product_id))}
+                        className="grid h-9 w-9 place-items-center rounded-lg text-red-600 hover:bg-red-50"
+                        aria-label="Remove item"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="mt-3 grid grid-cols-[88px_1fr_1fr] gap-2">
+                      <input className="field" type="number" min={1} value={item.quantity} onChange={(event) => setItems((current) => current.map((row) => row.product_id === item.product_id ? { ...row, quantity: Number(event.target.value) } : row))} />
+                      <input className="field" type="number" min={0} value={item.unit_price} onChange={(event) => setItems((current) => current.map((row) => row.product_id === item.product_id ? { ...row, unit_price: Number(event.target.value) } : row))} />
+                      <div className="flex items-center justify-end rounded-lg bg-blue-pale px-3 font-mono text-sm font-bold text-ink">
+                        {formatCurrency(item.quantity * item.unit_price)}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
-
-              <div className="mt-6 rounded-xl border border-blue-border bg-white p-4">
-                <div className="flex justify-between text-sm text-ink2">
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-3 text-sm text-ink2">
-                  <span>Discount</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={discount}
-                    onChange={(event) => setDiscount(Number(event.target.value))}
-                    className="w-32"
-                  />
-                </div>
-                <div className="mt-3 flex justify-between font-display text-2xl font-bold text-ink">
-                  <span>Total</span>
-                  <span>{formatCurrency(total)}</span>
-                </div>
-              </div>
+              <Totals subtotal={subtotal} discount={discount} total={total} onDiscount={setDiscount} />
             </section>
           ) : null}
 
           {step === 4 ? (
-            <section>
-              <h3 className="font-display text-xl font-bold text-ink">
-                Details
-              </h3>
-              <div className="mt-4 grid gap-4">
-                <label>
-                  <span className="mb-2 block text-sm font-semibold text-ink2">
-                    Delivery address
-                  </span>
-                  <Input
-                    value={deliveryAddress}
-                    onChange={(event) => setDeliveryAddress(event.target.value)}
-                  />
-                </label>
-                <label>
-                  <span className="mb-2 block text-sm font-semibold text-ink2">
-                    Expected delivery date
-                  </span>
-                  <Input
-                    type="date"
-                    value={expectedDeliveryAt}
-                    onChange={(event) => setExpectedDeliveryAt(event.target.value)}
-                  />
-                </label>
-                <label>
-                  <span className="mb-2 block text-sm font-semibold text-ink2">
-                    Notes
-                  </span>
-                  <textarea
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    className="min-h-28 w-full rounded-lg border border-blue-border bg-blue-pale px-3 py-2 text-sm text-ink outline-none transition focus:border-blue-primary focus:bg-white focus:ring-2 focus:ring-blue-light"
-                  />
-                </label>
+            <section className="space-y-4">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.08em] text-ink2">Delivery address</span>
+                <input className="field min-h-12" value={deliveryAddress} onChange={(event) => setDeliveryAddress(event.target.value)} placeholder="Customer delivery address" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.08em] text-ink2">Expected delivery date</span>
+                <input className="field min-h-12" type="date" value={expectedDeliveryAt} onChange={(event) => setExpectedDeliveryAt(event.target.value)} />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-bold uppercase tracking-[0.08em] text-ink2">Notes</span>
+                <textarea className="field min-h-28 py-3" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Internal notes, delivery instructions, or special terms" />
+              </label>
+            </section>
+          ) : null}
+
+          {step === 5 ? (
+            <section className="space-y-4">
+              <SelectedCustomerCard customer={selectedCustomer} compact />
+              <div className="rounded-xl border border-blue-border bg-white p-4">
+                <p className="font-mono text-[11px] font-bold uppercase tracking-[0.1em] text-ink3">Channel</p>
+                <p className="mt-1 text-sm font-bold text-ink">{selectedChannel?.label ?? channel}</p>
               </div>
+              <div className="overflow-hidden rounded-xl border border-blue-border bg-white">
+                {items.map((item) => (
+                  <div key={item.product_id} className="flex items-center justify-between gap-3 border-b border-blue-border px-4 py-3 last:border-b-0">
+                    <div>
+                      <p className="text-sm font-bold text-ink">{item.product_name}</p>
+                      <p className="font-mono text-xs text-ink3">{item.quantity} x {formatCurrency(item.unit_price)}</p>
+                    </div>
+                    <p className="font-mono text-sm font-bold text-ink">{formatCurrency(item.quantity * item.unit_price)}</p>
+                  </div>
+                ))}
+              </div>
+              <Totals subtotal={subtotal} discount={discount} total={total} readOnly />
+            </section>
+          ) : null}
+
+          {step === "success" ? (
+            <section className="flex flex-col items-center gap-5 py-6 text-center">
+              <div className="grid h-16 w-16 place-items-center rounded-2xl bg-green-light text-green">
+                <Check className="h-8 w-8" />
+              </div>
+              <div>
+                <h3 className="font-display text-3xl font-bold text-ink">Order Created</h3>
+                <p className="mt-2 font-mono text-sm font-bold text-blue-primary">{createdOrderNumber}</p>
+              </div>
+              <p className="max-w-sm text-sm text-ink2">
+                The order has been saved to the pipeline and stock has been adjusted.
+              </p>
+              <button type="button" onClick={resetAndClose} className="primary-action w-full max-w-xs">
+                Done
+              </button>
             </section>
           ) : null}
 
           {error ? (
-            <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+            <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
               {error}
             </p>
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between border-t border-blue-border px-5 py-4">
-          <Button
-            variant="ghost"
-            onClick={() => (step === 1 ? resetAndClose() : setStep(step - 1))}
-          >
-            {step === 1 ? "Cancel" : "Back"}
-          </Button>
-          {step === 4 ? (
-            <Button onClick={submitOrder} disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Order"}
-            </Button>
-          ) : (
-            <Button onClick={() => setStep(step + 1)}>Continue</Button>
-          )}
+        {step !== "success" ? (
+          <div className="flex flex-col gap-2 border-t border-blue-border bg-blue-pale px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            {typeof step === "number" && step > 1 ? (
+              <button type="button" onClick={back} className="secondary-action">
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+            ) : (
+              <button type="button" onClick={resetAndClose} className="secondary-action">
+                Cancel
+              </button>
+            )}
+
+            {step === 5 ? (
+              <button type="button" onClick={submitOrder} disabled={isSubmitting} className="primary-action">
+                {isSubmitting ? "Creating..." : "Create Order"}
+              </button>
+            ) : (
+              <button type="button" onClick={advance} disabled={!canAdvance()} className="primary-action disabled:opacity-50">
+                Continue
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SelectedCustomerCard({
+  customer,
+  onChange,
+  compact,
+}: {
+  customer: Customer | null;
+  onChange?: () => void;
+  compact?: boolean;
+}) {
+  if (!customer) return null;
+  return (
+    <div className="rounded-xl border border-blue-border bg-blue-pale p-4">
+      <div className="flex items-center gap-4">
+        <HealthDot score={customer.health_score ?? 50} />
+        <div className="min-w-0 flex-1">
+          <p className={cn("font-bold text-ink", compact ? "text-sm" : "text-base")}>
+            {customer.full_name}
+          </p>
+          <p className="mt-0.5 text-xs text-ink3">
+            {[customer.customer_type, customer.city, customer.phone, customer.email].filter(Boolean).join(" · ") || "No contact details"}
+          </p>
         </div>
+        {onChange ? (
+          <button type="button" onClick={onChange} className="text-xs font-bold text-blue-primary">
+            Change
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function HealthDot({ score }: { score: number }) {
+  const color = score >= 70 ? "border-green text-green" : score >= 40 ? "border-orange-300 text-orange-700" : "border-red-300 text-red-700";
+  return (
+    <div className={cn("grid h-11 w-11 shrink-0 place-items-center rounded-full border-4 bg-white font-mono text-[11px] font-bold", color)}>
+      {score}
+    </div>
+  );
+}
+
+function Totals({
+  subtotal,
+  discount,
+  total,
+  onDiscount,
+  readOnly,
+}: {
+  subtotal: number;
+  discount: number;
+  total: number;
+  onDiscount?: (value: number) => void;
+  readOnly?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-blue-border bg-white p-4">
+      <div className="flex justify-between text-sm text-ink2">
+        <span>Subtotal</span>
+        <span className="font-mono">{formatCurrency(subtotal)}</span>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3 text-sm text-ink2">
+        <span>Discount</span>
+        {readOnly ? (
+          <span className="font-mono">{formatCurrency(discount)}</span>
+        ) : (
+          <input
+            type="number"
+            min={0}
+            value={discount}
+            onChange={(event) => onDiscount?.(Number(event.target.value))}
+            className="h-10 w-32 rounded-lg border border-blue-border bg-blue-pale px-3 text-right font-mono text-sm outline-none focus:border-blue-primary"
+          />
+        )}
+      </div>
+      <div className="mt-4 flex justify-between font-display text-2xl font-bold text-ink">
+        <span>Total</span>
+        <span>{formatCurrency(total)}</span>
       </div>
     </div>
   );

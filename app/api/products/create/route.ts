@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     stock_quantity?: number;
     reorder_point?: number;
     unit?: string;
+    image_urls?: string[];
   };
 
   if (!body.name?.trim() || body.unit_price === undefined) {
@@ -72,6 +73,7 @@ export async function POST(request: Request) {
       stock_quantity: Number(body.stock_quantity ?? 0),
       reorder_point: Number(body.reorder_point ?? 5),
       unit: body.unit?.trim() || "unit",
+      image_urls: Array.isArray(body.image_urls) ? body.image_urls.slice(0, 3) : [],
     })
     .select("*")
     .single();

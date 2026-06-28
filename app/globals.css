@@ -8,16 +8,16 @@
   --blue: #1A4A8B;
   --blue-dark: #0D2E5C;
   --blue-mid: #2558A8;
-  --blue-light: #E8EEF8;
-  --blue-pale: #F4F6FB;
-  --ink: #1A1A2E;
-  --ink2: #4A5068;
-  --ink3: #8A90A8;
+  --blue-light: #E6EDF7;
+  --blue-pale: #F7F9FD;
+  --ink: #14172A;
+  --ink2: #414A63;
+  --ink3: #7E879B;
   --white: #FFFFFF;
   --green: #2E7D52;
   --green-light: #E8F5EE;
   --gold: #8B6A1A;
-  --border: #D8E2F4;
+  --border: #CAD8EC;
   --background: var(--blue-pale);
   --foreground: var(--ink);
   --font-display: "Fraunces";
@@ -31,10 +31,42 @@
 
 body {
   color: var(--foreground);
-  background: var(--white);
+  background: var(--blue-pale);
   font-family: var(--font-body), sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   min-height: 100vh;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+
+p,
+span,
+td,
+th,
+a,
+button,
+h1,
+h2,
+h3,
+h4,
+li,
+dt,
+dd {
+  overflow-wrap: anywhere;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
 }
 
 .animate-page-in {
@@ -83,6 +115,20 @@ body {
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@layer components {
+  .field {
+    @apply w-full rounded-lg border border-blue-border bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-blue-primary focus:ring-4 focus:ring-blue-light;
+  }
+
+  .primary-action {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-mid active:scale-[0.99] disabled:cursor-not-allowed;
+  }
+
+  .secondary-action {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-border bg-white px-4 py-2.5 text-sm font-bold text-ink2 transition hover:bg-blue-light active:scale-[0.99];
   }
 }
 

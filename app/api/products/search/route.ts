@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("products")
-    .select("id, name, sku, unit_price, stock_quantity")
+    .select("id, name, sku, unit_price, stock_quantity, image_urls")
     .eq("tenant_id", normalizedTenant.id)
     .eq("is_active", true)
     .order("name")
