@@ -109,16 +109,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Webhook secret is not configured." }, { status: 500 });
   }
 
-  const body = (await request.json()) as PaystackWebhook;
+  // Verify the signature against the RAW request body. Re-stringifying a
+  // parsed object can differ from what Paystack signed (key order/encoding),
+  // which would silently break verification — so hash the bytes as received.
+  const rawBody = await request.text();
   const signature = request.headers.get("x-paystack-signature") ?? "";
   const hash = crypto
     .createHmac("sha512", secret)
-    .update(JSON.stringify(body))
+    .update(rawBody)
     .digest("hex");
 
   if (hash !== signature) {
     return NextResponse.json({ error: "Invalid signature." }, { status: 403 });
   }
+
+  const body = JSON.parse(rawBody) as PaystackWebhook;
 
   const event = (body.event ?? "").toLowerCase();
   const { tenant_id: tenantId, tier } = getMetadata(body);
