@@ -28,6 +28,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
 
 type TabId = "queue" | "packaged" | "active" | "delivered";
@@ -107,6 +108,7 @@ function thirtyDaysAgoInput() {
 }
 
 export default function DispatchPage() {
+  const { isOnline } = useOnlineStatus();
   const [tab, setTab] = useState<TabId>("queue");
   const [orders, setOrders] = useState<Record<TabId, DispatchOrder[]>>({
     queue: [],
@@ -360,7 +362,14 @@ export default function DispatchPage() {
             {tab === "queue" ? (
               <div className="flex gap-2">
                 <button className="secondary-action" onClick={() => setSelectedIds(new Set())}>Clear</button>
-                <button className="primary-action" onClick={packageSelected}>Move to Packaged Queue</button>
+                <button
+                  className="primary-action disabled:opacity-50"
+                  onClick={packageSelected}
+                  disabled={!isOnline}
+                  title={!isOnline ? "Available when you're back online" : undefined}
+                >
+                  Move to Packaged Queue
+                </button>
               </div>
             ) : tab === "packaged" ? (
               <BulkAssignForm
@@ -503,6 +512,7 @@ function BulkAssignForm({
   setAssigning: (value: boolean) => void;
   onAssigned: (count: number) => void;
 }) {
+  const { isOnline } = useOnlineStatus();
   const [riderName, setRiderName] = useState("");
   const [riderPhone, setRiderPhone] = useState("");
   const [estimatedDate, setEstimatedDate] = useState(todayInput());
@@ -542,7 +552,13 @@ function BulkAssignForm({
       <Input value={riderName} onChange={(event) => setRiderName(event.target.value)} placeholder="Rider name" />
       <Input value={riderPhone} onChange={(event) => setRiderPhone(event.target.value)} placeholder="Phone" />
       <Input type="date" value={estimatedDate} onChange={(event) => setEstimatedDate(event.target.value)} />
-      <button type="button" className="primary-action" disabled={assigning || !riderName || !riderPhone} onClick={assign}>
+      <button
+        type="button"
+        className="primary-action disabled:opacity-50"
+        disabled={assigning || !riderName || !riderPhone || !isOnline}
+        title={!isOnline ? "Available when you're back online" : undefined}
+        onClick={assign}
+      >
         {assigning ? "Assigning..." : "Assign route"}
       </button>
       {error ? <p className="text-sm font-bold text-red-700 lg:col-span-4">{error}</p> : null}
@@ -590,11 +606,13 @@ function OrderDrawer({
   onClose: () => void;
   onRefresh: (message: string) => void;
 }) {
+  const { isOnline } = useOnlineStatus();
   const delivery = order.deliveries?.[0];
   const [assignOpen, setAssignOpen] = useState(order.status === "packaged");
   const [manualOpen, setManualOpen] = useState(false);
 
   async function markPackaged() {
+    if (!isOnline) return;
     const response = await fetch(`/api/orders/${order.id}/advance`, { method: "POST" });
     if (response.ok) onRefresh("Order moved to Packaged Queue.");
   }
@@ -638,13 +656,24 @@ function OrderDrawer({
           </div>
         ) : null}
         {order.status === "confirmed" ? (
-          <Button onClick={markPackaged} className="w-full">
+          <Button
+            onClick={markPackaged}
+            disabled={!isOnline}
+            title={!isOnline ? "Available when you're back online" : undefined}
+            className="w-full"
+          >
             <Package className="h-4 w-4" />
             Mark Packaged
           </Button>
         ) : null}
         {order.status === "packaged" ? (
-          <Button variant="ghost" onClick={() => setAssignOpen((value) => !value)} className="w-full">
+          <Button
+            variant="ghost"
+            onClick={() => setAssignOpen((value) => !value)}
+            disabled={!isOnline}
+            title={!isOnline ? "Available when you're back online" : undefined}
+            className="w-full"
+          >
             <Truck className="h-4 w-4" />
             Assign Rider
           </Button>
@@ -654,7 +683,13 @@ function OrderDrawer({
         ) : null}
         {order.status === "dispatched" && delivery ? (
           <>
-            <Button variant="ghost" onClick={() => setManualOpen((value) => !value)} className="w-full">
+            <Button
+              variant="ghost"
+              onClick={() => setManualOpen((value) => !value)}
+              disabled={!isOnline}
+              title={!isOnline ? "Available when you're back online" : undefined}
+              className="w-full"
+            >
               <CheckCircle2 className="h-4 w-4" />
               Mark Delivered (Manual)
             </Button>
@@ -678,6 +713,7 @@ function InfoTile({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function AssignSingleForm({ order, onAssigned }: { order: DispatchOrder; onAssigned: () => void }) {
+  const { isOnline } = useOnlineStatus();
   const [riderName, setRiderName] = useState("");
   const [riderPhone, setRiderPhone] = useState("");
   const [estimatedDate, setEstimatedDate] = useState(order.expected_delivery_at ?? todayInput());
@@ -685,6 +721,7 @@ function AssignSingleForm({ order, onAssigned }: { order: DispatchOrder; onAssig
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isOnline) return;
     setError("");
     const response = await fetch("/api/dispatch/assign-rider", {
       method: "POST",
@@ -711,18 +748,26 @@ function AssignSingleForm({ order, onAssigned }: { order: DispatchOrder; onAssig
         <Input value={riderPhone} onChange={(event) => setRiderPhone(event.target.value)} placeholder="Rider phone" required />
         <Input type="date" value={estimatedDate} onChange={(event) => setEstimatedDate(event.target.value)} />
         {error ? <p className="text-sm font-bold text-red-700">{error}</p> : null}
-        <Button type="submit">Confirm Assignment</Button>
+        <Button
+          type="submit"
+          disabled={!isOnline}
+          title={!isOnline ? "Available when you're back online" : undefined}
+        >
+          Confirm Assignment
+        </Button>
       </div>
     </form>
   );
 }
 
 function ManualDeliveredForm({ delivery, onSaved }: { delivery: Delivery; onSaved: () => void }) {
+  const { isOnline } = useOnlineStatus();
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isOnline) return;
     setError("");
     const response = await fetch("/api/dispatch/mark-delivered", {
       method: "POST",
@@ -747,7 +792,14 @@ function ManualDeliveredForm({ delivery, onSaved }: { delivery: Delivery; onSave
         required
       />
       {error ? <p className="mt-2 text-sm font-bold text-red-700">{error}</p> : null}
-      <Button type="submit" className="mt-3 w-full">Mark Delivered</Button>
+      <Button
+        type="submit"
+        disabled={!isOnline}
+        title={!isOnline ? "Available when you're back online" : undefined}
+        className="mt-3 w-full"
+      >
+        Mark Delivered
+      </Button>
     </form>
   );
 }

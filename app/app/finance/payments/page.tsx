@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
 
 type Payment = {
@@ -71,6 +72,7 @@ function channelVariant(channel: string | null) {
 }
 
 export default function PaymentQueuePage() {
+  const { isOnline } = useOnlineStatus();
   const [activeTab, setActiveTab] = useState<"pending" | "approved" | "all">("pending");
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
@@ -210,11 +212,21 @@ export default function PaymentQueuePage() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => verify(payment)} className="bg-green text-white hover:bg-green">
+                <Button
+                  onClick={() => verify(payment)}
+                  disabled={!isOnline}
+                  title={!isOnline ? "Available when you're back online" : undefined}
+                  className="bg-green text-white hover:bg-green"
+                >
                   <Check className="h-4 w-4" />
                   Verify
                 </Button>
-                <Button variant="danger" onClick={() => setRejecting(payment)}>
+                <Button
+                  variant="danger"
+                  onClick={() => setRejecting(payment)}
+                  disabled={!isOnline}
+                  title={!isOnline ? "Available when you're back online" : undefined}
+                >
                   <X className="h-4 w-4" />
                   Reject
                 </Button>
@@ -288,7 +300,13 @@ export default function PaymentQueuePage() {
             <p className="mt-3 text-sm leading-6 text-ink2">{softDuplicate.message}</p>
             <div className="mt-5 flex justify-end gap-3">
               <Button variant="ghost" onClick={() => setSoftDuplicate(null)}>Cancel</Button>
-              <Button onClick={() => verify(softDuplicate.payment, true)}>Confirm to Proceed</Button>
+              <Button
+                onClick={() => verify(softDuplicate.payment, true)}
+                disabled={!isOnline}
+                title={!isOnline ? "Available when you're back online" : undefined}
+              >
+                Confirm to Proceed
+              </Button>
             </div>
           </Card>
         </div>
@@ -306,7 +324,14 @@ export default function PaymentQueuePage() {
             />
             <div className="mt-5 flex justify-end gap-3">
               <Button variant="ghost" onClick={() => setRejecting(null)}>Cancel</Button>
-              <Button variant="danger" onClick={reject}>Reject Payment</Button>
+              <Button
+                variant="danger"
+                onClick={reject}
+                disabled={!isOnline}
+                title={!isOnline ? "Available when you're back online" : undefined}
+              >
+                Reject Payment
+              </Button>
             </div>
           </Card>
         </div>

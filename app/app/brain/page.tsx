@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import { Spinner } from "@/components/ui/Spinner";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
 
 type Entry = {
@@ -79,6 +80,7 @@ function formatDate(value: string | null) {
 }
 
 export default function BrainPage() {
+  const { isOnline } = useOnlineStatus();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [filter, setFilter] = useState<string>("all");
@@ -139,7 +141,7 @@ export default function BrainPage() {
 
   async function saveEntry(event: FormEvent) {
     event.preventDefault();
-    if (!form.title.trim() || !form.content.trim()) return;
+    if (!form.title.trim() || !form.content.trim() || !isOnline) return;
     setSaving(true);
     const url = editing
       ? `/api/knowledge/${editing.id}/update`
@@ -161,7 +163,7 @@ export default function BrainPage() {
   }
 
   async function deleteEntry(entry: Entry) {
-    if (!window.confirm(`Delete "${entry.title}"?`)) return;
+    if (!isOnline || !window.confirm(`Delete "${entry.title}"?`)) return;
     const res = await fetch(`/api/knowledge/${entry.id}/delete`, { method: "POST" });
     if (res.ok) {
       setToast("Entry deleted");
@@ -171,7 +173,7 @@ export default function BrainPage() {
 
   async function ask(text: string) {
     const query = text.trim();
-    if (!query || asking) return;
+    if (!query || asking || !isOnline) return;
     setQuestion("");
     setTurns((prev) => [...prev, { role: "user", content: query }]);
     setAsking(true);
@@ -213,7 +215,12 @@ export default function BrainPage() {
               <BookOpen className="h-5 w-5 text-blue-primary" aria-hidden="true" />
               <h2 className="font-display text-lg font-bold text-ink">Knowledge Base</h2>
             </div>
-            <Button onClick={openAdd} className="h-9 px-3">
+            <Button
+              onClick={openAdd}
+              disabled={!isOnline}
+              title={!isOnline ? "Available when you're back online" : undefined}
+              className="h-9 px-3"
+            >
               <Plus className="h-4 w-4" aria-hidden="true" /> Add Entry
             </Button>
           </div>
@@ -264,6 +271,8 @@ export default function BrainPage() {
                       <button
                         type="button"
                         onClick={() => openEdit(entry)}
+                        disabled={!isOnline}
+                        title={!isOnline ? "Available when you're back online" : undefined}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink2 hover:bg-blue-pale hover:text-blue-primary"
                         aria-label="Edit entry"
                       >
@@ -272,6 +281,8 @@ export default function BrainPage() {
                       <button
                         type="button"
                         onClick={() => deleteEntry(entry)}
+                        disabled={!isOnline}
+                        title={!isOnline ? "Available when you're back online" : undefined}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink2 hover:bg-red-50 hover:text-red-600"
                         aria-label="Delete entry"
                       >
@@ -313,6 +324,8 @@ export default function BrainPage() {
                       key={s}
                       type="button"
                       onClick={() => ask(s)}
+                      disabled={!isOnline}
+                      title={!isOnline ? "Available when you're back online" : undefined}
                       className="rounded-full border border-blue-border bg-blue-pale px-3 py-1.5 text-xs font-semibold text-blue-primary hover:bg-blue-light"
                     >
                       {s}
@@ -393,9 +406,15 @@ export default function BrainPage() {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder="Ask the Brain a question..."
-              disabled={asking}
+              disabled={asking || !isOnline}
+              title={!isOnline ? "Available when you're back online" : undefined}
             />
-            <Button type="submit" disabled={asking || !question.trim()} className="px-3">
+            <Button
+              type="submit"
+              disabled={asking || !question.trim() || !isOnline}
+              title={!isOnline ? "Available when you're back online" : undefined}
+              className="px-3"
+            >
               <Send className="h-4 w-4" aria-hidden="true" />
             </Button>
           </form>
@@ -452,7 +471,11 @@ export default function BrainPage() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button
+              type="submit"
+              disabled={saving || !isOnline}
+              title={!isOnline ? "Available when you're back online" : undefined}
+            >
               {saving ? <Spinner className="h-4 w-4" /> : null}
               {editing ? "Save changes" : "Add entry"}
             </Button>

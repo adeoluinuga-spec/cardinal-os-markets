@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 type Order = {
   id: string;
@@ -45,6 +46,7 @@ function money(value: number) {
 }
 
 export default function SubmitPaymentPage() {
+  const { isOnline } = useOnlineStatus();
   const [orders, setOrders] = useState<Order[]>([]);
   const [payments, setPayments] = useState<SubmittedPayment[]>([]);
   const [orderId, setOrderId] = useState("");
@@ -291,6 +293,7 @@ export default function SubmitPaymentPage() {
           <Button
             type="submit"
             disabled={
+              !isOnline ||
               isSubmitting ||
               isUploading ||
               !selectedOrder ||
@@ -298,6 +301,7 @@ export default function SubmitPaymentPage() {
               amountTooHigh ||
               numericAmount <= 0
             }
+            title={!isOnline ? "Available when you're back online" : undefined}
           >
             {isSubmitting ? "Submitting..." : "Submit Payment"}
           </Button>

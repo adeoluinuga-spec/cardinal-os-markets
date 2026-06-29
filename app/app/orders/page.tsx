@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Spinner } from "@/components/ui/Spinner";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { NewOrderModal } from "@/components/orders/NewOrderModal";
 import { cn } from "@/lib/utils";
@@ -95,6 +96,7 @@ function countFor(value: string, counts: Record<string, number>) {
 }
 
 export default function OrdersPage() {
+  const { isOnline } = useOnlineStatus();
   const [orders, setOrders] = useState<Order[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [activeStatus, setActiveStatus] = useState("active");
@@ -164,7 +166,11 @@ export default function OrdersPage() {
       ) : null}
 
       <PageHeader title="Order Pipeline" subtitle="Track quotes through payment, packaging, dispatch, and delivery.">
-        <Button onClick={() => setIsModalOpen(true)}>
+        <Button
+          onClick={() => isOnline && setIsModalOpen(true)}
+          disabled={!isOnline}
+          title={!isOnline ? "Available when you're back online" : undefined}
+        >
           <Plus className="h-4 w-4" />
           New Order
         </Button>

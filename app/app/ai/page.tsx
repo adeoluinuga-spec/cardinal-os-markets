@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Bot, Send, Sparkles } from "lucide-react";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -15,6 +16,7 @@ const SUGGESTIONS = [
 ];
 
 export default function AiAssistantPage() {
+  const { isOnline } = useOnlineStatus();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -29,7 +31,7 @@ export default function AiAssistantPage() {
 
   async function send(text: string) {
     const message = text.trim();
-    if (!message || sending) return;
+    if (!message || sending || !isOnline) return;
     const history = messages;
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: message }]);
@@ -90,6 +92,8 @@ export default function AiAssistantPage() {
                   key={s}
                   type="button"
                   onClick={() => send(s)}
+                  disabled={!isOnline}
+                  title={!isOnline ? "Available when you're back online" : undefined}
                   className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-blue-light transition hover:bg-white/10 hover:text-white"
                 >
                   {s}
@@ -140,12 +144,14 @@ export default function AiAssistantPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Message your AI assistant..."
-          disabled={sending}
+          disabled={sending || !isOnline}
+          title={!isOnline ? "Available when you're back online" : undefined}
           className="h-11 flex-1 rounded-lg border border-white/15 bg-white/5 px-4 text-sm text-white outline-none transition placeholder:text-blue-light/60 focus:border-blue-light focus:bg-white/10 disabled:opacity-60"
         />
         <button
           type="submit"
-          disabled={sending || !input.trim()}
+          disabled={sending || !input.trim() || !isOnline}
+          title={!isOnline ? "Available when you're back online" : undefined}
           className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-blue-primary text-white transition hover:bg-blue-mid disabled:pointer-events-none disabled:opacity-50"
           aria-label="Send message"
         >

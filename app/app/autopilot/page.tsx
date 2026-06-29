@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 type Draft = {
   customer_name?: string;
@@ -19,6 +20,7 @@ type Draft = {
 type ActionItem = { title: string; reason: string; priority: "high" | "medium" | "low" };
 
 export default function AutopilotPage() {
+  const { isOnline } = useOnlineStatus();
   const [conversation, setConversation] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [actions, setActions] = useState<ActionItem[]>([]);
@@ -26,6 +28,8 @@ export default function AutopilotPage() {
 
   async function extract(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isOnline) return;
+    if (!isOnline) return;
     setIsLoading(true);
     const response = await fetch("/api/autopilot/extract-order", {
       method: "POST",
@@ -69,7 +73,11 @@ export default function AutopilotPage() {
               className="min-h-48 w-full rounded-lg border border-blue-border bg-blue-pale px-3 py-2 text-sm text-ink outline-none focus:border-blue-primary focus:bg-white focus:ring-2 focus:ring-blue-light"
               required
             />
-            <Button type="submit" disabled={isLoading}>
+            <Button
+              type="submit"
+              disabled={isLoading || !isOnline}
+              title={!isOnline ? "Available when you're back online" : undefined}
+            >
               <Wand2 className="h-4 w-4" />
               Extract Order
             </Button>
@@ -87,7 +95,14 @@ export default function AutopilotPage() {
                 ))}
               </ul>
               <p className="mt-4 text-sm text-ink2">{draft.delivery_address}</p>
-              <Button className="mt-4" onClick={sendDraftToOrders}>Create Quote Draft</Button>
+              <Button
+                className="mt-4"
+                onClick={sendDraftToOrders}
+                disabled={!isOnline}
+                title={!isOnline ? "Available when you're back online" : undefined}
+              >
+                Create Quote Draft
+              </Button>
             </div>
           ) : null}
         </Card>
@@ -97,7 +112,14 @@ export default function AutopilotPage() {
               <ClipboardCheck className="h-5 w-5 text-blue-primary" />
               <h2 className="font-display text-2xl font-bold text-ink">Action Centre</h2>
             </div>
-            <Button variant="ghost" onClick={scan}>Scan</Button>
+            <Button
+              variant="ghost"
+              onClick={scan}
+              disabled={!isOnline}
+              title={!isOnline ? "Available when you're back online" : undefined}
+            >
+              Scan
+            </Button>
           </div>
           <div className="mt-4 space-y-3">
             {actions.length === 0 ? <p className="text-sm text-ink2">Run a scan to see today’s follow-ups, risks, and opportunities.</p> : null}

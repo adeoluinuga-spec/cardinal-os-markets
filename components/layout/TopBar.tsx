@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Bell, Menu, Plus } from "lucide-react";
 import { useTenant } from "@/context/TenantContext";
 import { NewOrderModal } from "@/components/orders/NewOrderModal";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 const ORDER_CREATOR_ROLES = ["ceo", "owner", "admin", "sales_agent"];
 
@@ -74,6 +75,7 @@ export function TopBar({
   const pathname = usePathname();
   const router = useRouter();
   const { tenant, role } = useTenant();
+  const { isOnline } = useOnlineStatus();
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const shouldShowUpgrade =
     tenant?.subscription_status === "trial" ||
@@ -118,8 +120,10 @@ export function TopBar({
         {canCreateOrder ? (
           <button
             type="button"
-            onClick={() => setIsOrderModalOpen(true)}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-blue-primary px-3 text-xs font-semibold text-white transition hover:bg-blue-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-mid focus-visible:ring-offset-2"
+            onClick={() => isOnline && setIsOrderModalOpen(true)}
+            disabled={!isOnline}
+            title={!isOnline ? "Available when you're back online" : undefined}
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-blue-primary px-3 text-xs font-semibold text-white transition hover:bg-blue-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-mid focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             <span className="hidden sm:inline">New Order</span>
