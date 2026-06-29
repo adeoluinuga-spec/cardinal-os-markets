@@ -4,7 +4,7 @@ import { createServerSupabaseClient, getCurrentUserWithTenant } from "@/lib/serv
 type RouteContext = { params: { id: string } };
 
 function isVerifier(role: string | null) {
-  return ["owner", "admin", "finance"].includes(role ?? "");
+  return ["ceo", "owner", "admin", "finance"].includes(role ?? "");
 }
 
 export async function POST(request: Request, { params }: RouteContext) {

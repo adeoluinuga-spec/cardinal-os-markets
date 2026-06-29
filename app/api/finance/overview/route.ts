@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient, getCurrentUserWithTenant } from "@/lib/serverAuth";
 
 function isFinanceAllowed(role: string | null) {
-  return ["owner", "admin", "finance"].includes(role ?? "");
+  return ["ceo", "owner", "admin", "finance"].includes(role ?? "");
 }
 
 function startOfDay(date: Date) {

@@ -7,7 +7,7 @@ import { Bell, Menu, Plus } from "lucide-react";
 import { useTenant } from "@/context/TenantContext";
 import { NewOrderModal } from "@/components/orders/NewOrderModal";
 
-const ORDER_CREATOR_ROLES = ["owner", "admin", "sales_agent"];
+const ORDER_CREATOR_ROLES = ["ceo", "owner", "admin", "sales_agent"];
 
 const pageTitles: Record<string, string> = {
   "/app/dashboard": "War Room",

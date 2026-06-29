@@ -72,7 +72,7 @@ export async function POST() {
     .insert({
       tenant_id: tenant.id,
       user_id: user.id,
-      role: "owner",
+      role: "ceo",
       full_name: fullName || user.email || "Owner",
     });
 

@@ -4,7 +4,7 @@ import { getCurrentUserWithTenant } from "@/lib/serverAuth";
 
 export async function POST(request: Request) {
   const { tenant, role } = await getCurrentUserWithTenant();
-  if (!tenant || !["owner", "admin"].includes(role ?? "")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!tenant || !["ceo", "owner", "admin"].includes(role ?? "")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const t = Array.isArray(tenant) ? tenant[0] : tenant;
   const data = await request.json();
   let brief = "Performance is available. Review top order value, payment verification, and task completion to identify coaching opportunities.";

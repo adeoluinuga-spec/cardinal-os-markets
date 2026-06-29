@@ -52,7 +52,7 @@ type NavSection = {
   items: NavItem[];
 };
 
-const allRoles = ["owner", "admin"];
+const allRoles = ["ceo", "owner", "admin"];
 
 const navSections: NavSection[] = [
   {
@@ -68,7 +68,7 @@ const navSections: NavSection[] = [
         label: "Tasks",
         href: "/app/tasks",
         icon: ListTodo,
-        roles: [...allRoles, "sales_agent", "warehouse", "finance"],
+        roles: [...allRoles, "sales_agent", "warehouse", "logistics", "finance"],
         feature: "tasks",
       },
       {
@@ -81,13 +81,13 @@ const navSections: NavSection[] = [
         label: "Orders",
         href: "/app/orders",
         icon: ClipboardList,
-        roles: [...allRoles, "sales_agent", "warehouse", "finance"],
+        roles: [...allRoles, "sales_agent", "warehouse", "logistics", "finance"],
       },
       {
         label: "Submit Payment",
         href: "/app/submit-payment",
         icon: WalletCards,
-        roles: [...allRoles, "sales_agent", "warehouse", "finance"],
+        roles: [...allRoles, "sales_agent", "warehouse", "logistics", "finance"],
       },
       {
         label: "Performance",
@@ -105,25 +105,25 @@ const navSections: NavSection[] = [
         label: "Products",
         href: "/app/products",
         icon: Package,
-        roles: [...allRoles, "warehouse"],
+        roles: [...allRoles, "warehouse", "logistics"],
       },
       {
         label: "Incoming Stock",
         href: "/app/incoming-stock",
         icon: Boxes,
-        roles: [...allRoles, "warehouse"],
+        roles: [...allRoles, "warehouse", "logistics"],
       },
       {
         label: "Dispatch",
         href: "/app/dispatch",
         icon: Truck,
-        roles: [...allRoles, "warehouse"],
+        roles: [...allRoles, "warehouse", "logistics"],
       },
       {
         label: "Store Pickup",
         href: "/app/pickup",
         icon: Store,
-        roles: [...allRoles, "warehouse", "sales_agent"],
+        roles: [...allRoles, "warehouse", "logistics", "sales_agent"],
       },
     ],
   },
@@ -191,6 +191,9 @@ const navSections: NavSection[] = [
 function formatRole(role: string | null) {
   if (!role) {
     return "Member";
+  }
+  if (role === "ceo") {
+    return "CEO";
   }
 
   return role

@@ -6,6 +6,7 @@ import { getTierLimits, isAtLimit, normalizeTier } from "@/lib/tiers";
 const ASSIGNABLE_ROLES = new Set([
   "admin",
   "sales_agent",
+  "logistics",
   "warehouse",
   "finance",
   "rider",
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
   if (!tenant || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!role || !["owner", "admin"].includes(role)) {
+  if (!role || !["ceo", "owner", "admin"].includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

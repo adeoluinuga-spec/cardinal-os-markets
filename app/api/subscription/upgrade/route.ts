@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   if (!tenant) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!role || !["owner", "admin"].includes(role)) {
+  if (!role || !["ceo", "owner", "admin"].includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

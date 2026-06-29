@@ -70,8 +70,9 @@ async function notifyPaymentFailed(tenantId: string) {
       .from("tenant_users")
       .select("user_id")
       .eq("tenant_id", tenantId)
-      .eq("role", "owner")
+      .in("role", ["ceo", "owner"])
       .eq("is_active", true)
+      .order("role", { ascending: true })
       .maybeSingle();
 
     if (owner?.user_id) {

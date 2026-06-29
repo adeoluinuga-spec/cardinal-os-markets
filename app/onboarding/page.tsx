@@ -49,6 +49,7 @@ const businessTypes = [
 
 const inviteRoles = [
   { label: "Sales Agent", value: "sales_agent" },
+  { label: "Logistics", value: "logistics" },
   { label: "Warehouse", value: "warehouse" },
   { label: "Finance", value: "finance" },
   { label: "Rider", value: "rider" },

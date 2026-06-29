@@ -67,10 +67,12 @@ export async function GET() {
   const businessType = normalizedTenant.business_type ?? "general trade";
   const city = normalizedTenant.city ?? "Lagos";
   const roleFocus: Record<string, string> = {
+    ceo: "Focus on overall revenue, payments, team priorities, and risks.",
     owner: "Focus on overall revenue, payments, team priorities, and risks.",
     admin: "Focus on operational control, exceptions, and team follow-up.",
     sales_agent: "Focus on customers, quotes, orders, and follow-up actions.",
     warehouse: "Focus on confirmed orders, production, packaging, dispatch, and stock.",
+    logistics: "Focus on packaged orders, dispatch, delivery confirmation, and stock movement.",
     finance: "Focus on outstanding payments, pending confirmations, and cash collection.",
   };
   const prompt = `You are the AI business assistant for ${normalizedTenant.name}, a ${businessType} business in ${city}. Today is ${date}. The current user's role is ${normalizedRole}. ${roleFocus[normalizedRole] ?? "Focus on the most useful action for this role."} Business summary: revenue today ${formatCurrency(stats.todaysRevenue)}, orders today ${stats.ordersToday}, outstanding payments ${formatCurrency(stats.outstanding)}, ${stats.activeCustomers} customers active. Write a 3-sentence morning brief. Be specific. End with one recommended action.`;

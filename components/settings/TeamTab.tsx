@@ -22,6 +22,7 @@ type Member = {
 const ROLES = [
   { label: "Admin", value: "admin" },
   { label: "Sales Agent", value: "sales_agent" },
+  { label: "Logistics", value: "logistics" },
   { label: "Warehouse", value: "warehouse" },
   { label: "Finance", value: "finance" },
   { label: "Rider", value: "rider" },
@@ -141,15 +142,17 @@ export function TeamTab({ onToast }: { onToast: (m: string) => void }) {
             </thead>
             <tbody>
               {members.map((member) => {
-                const isOwner = member.role === "owner";
+                const isProtectedLeader = ["ceo", "owner"].includes(member.role);
                 return (
                   <tr key={member.id} className="border-b border-blue-border/60">
                     <td className="py-3 pr-3 font-semibold text-ink">
                       {member.full_name}
                     </td>
                     <td className="py-3 pr-3">
-                      {isOwner ? (
-                        <Badge variant="gold">Owner</Badge>
+                      {isProtectedLeader ? (
+                        <Badge variant="gold">
+                          {member.role === "ceo" ? "CEO" : "Owner"}
+                        </Badge>
                       ) : (
                         <Select
                           value={member.role}
@@ -172,7 +175,7 @@ export function TeamTab({ onToast }: { onToast: (m: string) => void }) {
                       </Badge>
                     </td>
                     <td className="py-3 pr-3">
-                      {isOwner ? (
+                      {isProtectedLeader ? (
                         <span className="text-xs text-ink3">—</span>
                       ) : (
                         <Button

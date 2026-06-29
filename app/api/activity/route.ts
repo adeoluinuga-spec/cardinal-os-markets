@@ -3,7 +3,7 @@ import { createServerSupabaseClient, getCurrentUserWithTenant } from "@/lib/serv
 
 export async function GET(request: Request) {
   const { tenant, role } = await getCurrentUserWithTenant();
-  if (!tenant || !["owner", "admin"].includes(role ?? "")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!tenant || !["ceo", "owner", "admin"].includes(role ?? "")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const t = Array.isArray(tenant) ? tenant[0] : tenant;
   const p = new URL(request.url).searchParams;
   const supabase = await createServerSupabaseClient();

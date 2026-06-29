@@ -3,7 +3,7 @@ import { createServerSupabaseClient, getCurrentUserWithTenant } from "@/lib/serv
 
 export async function GET(request: Request) {
   const { tenant, role } = await getCurrentUserWithTenant();
-  if (!tenant || !["owner", "admin"].includes(role ?? "")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!tenant || !["ceo", "owner", "admin"].includes(role ?? "")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const t = Array.isArray(tenant) ? tenant[0] : tenant;
   const days = Number(new URL(request.url).searchParams.get("days") ?? 30);
   const since = new Date(Date.now() - days * 86_400_000).toISOString();

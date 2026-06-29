@@ -17,9 +17,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!["owner", "admin"].includes(String(role))) {
+  if (!["ceo", "owner", "admin"].includes(String(role))) {
     return NextResponse.json(
-      { error: "Only owners and admins can cancel a subscription." },
+      { error: "Only CEOs, owners, and admins can cancel a subscription." },
       { status: 403 },
     );
   }

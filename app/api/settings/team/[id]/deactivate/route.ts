@@ -9,7 +9,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!tenant) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!role || !["owner", "admin"].includes(role)) {
+  if (!role || !["ceo", "owner", "admin"].includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -26,9 +26,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     .eq("tenant_id", t.id)
     .eq("id", params.id)
     .maybeSingle();
-  if (target?.role === "owner") {
+  if (target?.role === "ceo" || target?.role === "owner") {
     return NextResponse.json(
-      { error: "The owner cannot be deactivated." },
+      { error: "The CEO/owner cannot be deactivated." },
       { status: 400 },
     );
   }

@@ -7,6 +7,7 @@ type RouteContext = { params: { id: string } };
 const ASSIGNABLE_ROLES = new Set([
   "admin",
   "sales_agent",
+  "logistics",
   "warehouse",
   "finance",
   "rider",
@@ -18,7 +19,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (!tenant) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!role || !["owner", "admin"].includes(role)) {
+  if (!role || !["ceo", "owner", "admin"].includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -28,16 +29,16 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "Invalid role." }, { status: 400 });
   }
 
-  // Never change the owner's role.
+  // Never change the CEO/owner role from this staff-management screen.
   const { data: target } = await supabaseAdmin
     .from("tenant_users")
     .select("role")
     .eq("tenant_id", t.id)
     .eq("id", params.id)
     .maybeSingle();
-  if (target?.role === "owner") {
+  if (target?.role === "ceo" || target?.role === "owner") {
     return NextResponse.json(
-      { error: "The owner's role cannot be changed." },
+      { error: "The CEO/owner role cannot be changed here." },
       { status: 400 },
     );
   }
