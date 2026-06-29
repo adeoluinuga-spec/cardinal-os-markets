@@ -24,6 +24,9 @@ type Tenant = {
   business_type: string | null;
   city: string | null;
   phone: string | null;
+  whatsapp_number: string | null;
+  daily_brief_enabled: boolean | null;
+  whatsapp_opted_in: boolean | null;
   market_association: string | null;
   logo_url: string | null;
 };
@@ -77,6 +80,8 @@ export default function OnboardingPage() {
   const [businessType, setBusinessType] = useState("");
   const [city, setCity] = useState("Lagos");
   const [businessPhone, setBusinessPhone] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [dailyBriefOptIn, setDailyBriefOptIn] = useState(true);
   const [marketAssociation, setMarketAssociation] = useState("");
   const [isAssociationLocked, setIsAssociationLocked] = useState(false);
 
@@ -103,7 +108,7 @@ export default function OnboardingPage() {
 
       const { data: tenantUser, error: tenantError } = await supabase
         .from("tenant_users")
-        .select("tenant:tenants(id,name,business_type,city,phone,market_association,logo_url)")
+        .select("tenant:tenants(id,name,business_type,city,phone,whatsapp_number,daily_brief_enabled,whatsapp_opted_in,market_association,logo_url)")
         .eq("user_id", user.id)
         .eq("is_active", true)
         .maybeSingle();
@@ -123,6 +128,10 @@ export default function OnboardingPage() {
       setBusinessType(nextTenant.business_type ?? "");
       setCity(nextTenant.city ?? "Lagos");
       setBusinessPhone(nextTenant.phone ?? "");
+      setWhatsappNumber(nextTenant.whatsapp_number ?? nextTenant.phone ?? "");
+      setDailyBriefOptIn(
+        nextTenant.whatsapp_opted_in ?? nextTenant.daily_brief_enabled ?? true,
+      );
       setMarketAssociation(nextTenant.market_association ?? "");
       setLogoPreview(nextTenant.logo_url ?? "");
 
@@ -175,6 +184,13 @@ export default function OnboardingPage() {
         business_type: businessType,
         city: city.trim(),
         phone: businessPhone.trim() || null,
+        whatsapp_number:
+          whatsappNumber.trim() || businessPhone.trim() || null,
+        daily_brief_enabled: dailyBriefOptIn,
+        whatsapp_opted_in: dailyBriefOptIn,
+        whatsapp_opted_in_at: dailyBriefOptIn
+          ? new Date().toISOString()
+          : null,
         market_association: marketAssociation.trim() || null,
       })
       .eq("id", tenant.id);
@@ -190,6 +206,9 @@ export default function OnboardingPage() {
       business_type: businessType,
       city: city.trim(),
       phone: businessPhone.trim() || null,
+      whatsapp_number: whatsappNumber.trim() || businessPhone.trim() || null,
+      daily_brief_enabled: dailyBriefOptIn,
+      whatsapp_opted_in: dailyBriefOptIn,
       market_association: marketAssociation.trim() || null,
     });
     return true;
@@ -462,6 +481,35 @@ export default function OnboardingPage() {
                     onChange={(event) => setBusinessPhone(event.target.value)}
                     inputMode="tel"
                   />
+                </label>
+                <label>
+                  <span className="mb-2 block text-sm font-semibold text-ink2">
+                    WhatsApp number
+                  </span>
+                  <Input
+                    value={whatsappNumber}
+                    onChange={(event) => setWhatsappNumber(event.target.value)}
+                    inputMode="tel"
+                    placeholder="Use business phone if same"
+                  />
+                </label>
+                <label className="flex items-start gap-3 rounded-xl border border-blue-border bg-blue-pale p-4">
+                  <input
+                    type="checkbox"
+                    checked={dailyBriefOptIn}
+                    onChange={(event) =>
+                      setDailyBriefOptIn(event.target.checked)
+                    }
+                    className="mt-1 h-4 w-4 rounded border-blue-border text-blue-primary focus:ring-blue-primary"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-ink">
+                      📱 Send me business summaries on WhatsApp
+                    </span>
+                    <span className="mt-1 block text-xs text-ink2">
+                      You can switch between daily and weekly updates later in Settings.
+                    </span>
+                  </span>
                 </label>
                 <label>
                   <span className="mb-2 block text-sm font-semibold text-ink2">

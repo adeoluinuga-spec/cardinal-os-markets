@@ -37,6 +37,12 @@ type Form = {
   ai_persona_name: string;
   logo_url: string;
   paystack_public_key: string;
+  whatsapp_number: string;
+  daily_brief_enabled: boolean;
+  daily_brief_time: string;
+  daily_brief_frequency: string;
+  weekly_brief_day: string;
+  whatsapp_opted_in: boolean;
 };
 
 const EMPTY: Form = {
@@ -48,7 +54,23 @@ const EMPTY: Form = {
   ai_persona_name: "Cardinal",
   logo_url: "",
   paystack_public_key: "",
+  whatsapp_number: "",
+  daily_brief_enabled: true,
+  daily_brief_time: "18:00",
+  daily_brief_frequency: "daily",
+  weekly_brief_day: "1",
+  whatsapp_opted_in: false,
 };
+
+const WEEK_DAYS = [
+  { label: "Sunday", value: "0" },
+  { label: "Monday", value: "1" },
+  { label: "Tuesday", value: "2" },
+  { label: "Wednesday", value: "3" },
+  { label: "Thursday", value: "4" },
+  { label: "Friday", value: "5" },
+  { label: "Saturday", value: "6" },
+];
 
 export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
   const { tenant, refetchTenant } = useTenant();
@@ -62,6 +84,7 @@ export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
   const [paystackWebhookSecret, setPaystackWebhookSecret] = useState("");
   const [hasPaystackSecret, setHasPaystackSecret] = useState(false);
   const [hasPaystackWebhookSecret, setHasPaystackWebhookSecret] = useState(false);
+  const [sendingTestBrief, setSendingTestBrief] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings/business")
@@ -78,6 +101,12 @@ export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
             ai_persona_name: b.ai_persona_name ?? "Cardinal",
             logo_url: b.logo_url ?? "",
             paystack_public_key: b.paystack_public_key ?? "",
+            whatsapp_number: b.whatsapp_number ?? "",
+            daily_brief_enabled: b.daily_brief_enabled ?? true,
+            daily_brief_time: b.daily_brief_time ?? "18:00",
+            daily_brief_frequency: b.daily_brief_frequency ?? "daily",
+            weekly_brief_day: String(b.weekly_brief_day ?? 1),
+            whatsapp_opted_in: b.whatsapp_opted_in ?? false,
           });
           setHasPaystackSecret(Boolean(b.has_paystack_secret_key));
           setHasPaystackWebhookSecret(Boolean(b.has_paystack_webhook_secret));
@@ -115,7 +144,7 @@ export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
     }
     setSaving(true);
     setError("");
-    const payload: Record<string, string> = { ...form };
+    const payload: Record<string, unknown> = { ...form };
     if (paystackSecretKey.trim()) {
       payload.paystack_secret_key = paystackSecretKey.trim();
     }
@@ -139,6 +168,19 @@ export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
     } else {
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "Could not save changes.");
+    }
+  }
+
+  async function sendTestBrief() {
+    setSendingTestBrief(true);
+    setError("");
+    const res = await fetch("/api/settings/brief/test", { method: "POST" });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    setSendingTestBrief(false);
+    if (res.ok) {
+      onToast("Test WhatsApp brief sent");
+    } else {
+      setError(data.error ?? "Could not send test brief.");
     }
   }
 
@@ -295,6 +337,105 @@ export function BusinessTab({ onToast }: { onToast: (m: string) => void }) {
           <p className="mt-3 font-mono text-[11px] text-ink3">
             Tenant webhook URL: /api/webhooks/paystack/{tenant?.slug ?? "[tenant_slug]"}
           </p>
+        </div>
+
+        <div className="rounded-xl border border-blue-border bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="font-display text-xl font-bold text-ink">
+                Daily WhatsApp Brief
+              </h3>
+              <p className="mt-1 text-sm text-ink2">
+                Send business performance updates to the owner on WhatsApp.
+              </p>
+            </div>
+            <label className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
+              <input
+                type="checkbox"
+                checked={form.daily_brief_enabled && form.whatsapp_opted_in}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    daily_brief_enabled: e.target.checked,
+                    whatsapp_opted_in: e.target.checked,
+                  })
+                }
+                className="h-4 w-4 rounded border-blue-border text-blue-primary focus:ring-blue-primary"
+              />
+              Enabled
+            </label>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-ink2">
+                WhatsApp number
+              </span>
+              <Input
+                value={form.whatsapp_number}
+                onChange={(e) =>
+                  setForm({ ...form, whatsapp_number: e.target.value })
+                }
+                inputMode="tel"
+                placeholder="08012345678"
+              />
+            </label>
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-ink2">
+                Send updates
+              </span>
+              <Select
+                value={form.daily_brief_frequency}
+                onChange={(e) =>
+                  setForm({ ...form, daily_brief_frequency: e.target.value })
+                }
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </Select>
+            </label>
+            <label>
+              <span className="mb-1 block text-sm font-semibold text-ink2">
+                Preferred time
+              </span>
+              <Input
+                type="time"
+                value={form.daily_brief_time}
+                onChange={(e) =>
+                  setForm({ ...form, daily_brief_time: e.target.value })
+                }
+              />
+            </label>
+            {form.daily_brief_frequency === "weekly" ? (
+              <label>
+                <span className="mb-1 block text-sm font-semibold text-ink2">
+                  Weekly day
+                </span>
+                <Select
+                  value={form.weekly_brief_day}
+                  onChange={(e) =>
+                    setForm({ ...form, weekly_brief_day: e.target.value })
+                  }
+                >
+                  {WEEK_DAYS.map((day) => (
+                    <option key={day.value} value={day.value}>
+                      {day.label}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            ) : null}
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={sendTestBrief}
+              disabled={sendingTestBrief || !form.whatsapp_number}
+            >
+              {sendingTestBrief ? <Spinner className="h-4 w-4" /> : null}
+              Send me a test brief now
+            </Button>
+          </div>
         </div>
 
         {error ? (

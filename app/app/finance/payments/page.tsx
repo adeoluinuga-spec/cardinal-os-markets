@@ -71,7 +71,7 @@ function channelVariant(channel: string | null) {
 }
 
 export default function PaymentQueuePage() {
-  const [activeTab, setActiveTab] = useState<"pending" | "all">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "all">("pending");
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [from, setFrom] = useState("");
@@ -84,7 +84,12 @@ export default function PaymentQueuePage() {
   const [rejectReason, setRejectReason] = useState("");
   const [softDuplicate, setSoftDuplicate] = useState<{ payment: Payment; message: string } | null>(null);
 
-  const effectiveStatus = activeTab === "pending" ? "pending" : status;
+  const effectiveStatus =
+    activeTab === "pending"
+      ? "pending"
+      : activeTab === "approved"
+        ? "verified"
+        : status;
 
   const load = useCallback(async () => {
     const params = new URLSearchParams();
@@ -164,12 +169,13 @@ export default function PaymentQueuePage() {
         <div className="flex gap-2 overflow-x-auto">
           {[
             { label: "Pending", value: "pending" },
+            { label: "Approved", value: "approved" },
             { label: "All Payments", value: "all" },
           ].map((tab) => (
             <button
               key={tab.value}
               type="button"
-              onClick={() => setActiveTab(tab.value as "pending" | "all")}
+              onClick={() => setActiveTab(tab.value as "pending" | "approved" | "all")}
               className={cn(
                 "rounded-lg px-3 py-2 text-sm font-semibold transition",
                 activeTab === tab.value ? "bg-blue-primary text-white" : "bg-blue-pale text-ink2 hover:bg-blue-light",
@@ -218,17 +224,25 @@ export default function PaymentQueuePage() {
         </div>
       ) : (
         <Card className="overflow-hidden p-0">
-          <div className="grid gap-3 border-b border-blue-border p-4 md:grid-cols-4">
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search reference or customer" />
-            <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 rounded-lg border border-blue-border bg-blue-pale px-3 text-sm text-ink outline-none focus:border-blue-primary focus:bg-white focus:ring-2 focus:ring-blue-light">
-              <option value="all">All statuses</option>
-              <option value="pending">Pending</option>
-              <option value="verified">Verified</option>
-              <option value="rejected">Rejected</option>
-            </select>
-            <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
-            <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
-          </div>
+          {activeTab === "all" ? (
+            <div className="grid gap-3 border-b border-blue-border p-4 md:grid-cols-4">
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search reference or customer" />
+              <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 rounded-lg border border-blue-border bg-blue-pale px-3 text-sm text-ink outline-none focus:border-blue-primary focus:bg-white focus:ring-2 focus:ring-blue-light">
+                <option value="all">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="verified">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
+              <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
+            </div>
+          ) : (
+            <div className="grid gap-3 border-b border-blue-border p-4 md:grid-cols-3">
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search reference or customer" />
+              <Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
+              <Input type="date" value={to} onChange={(event) => setTo(event.target.value)} />
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[920px] text-left text-sm">
               <thead className="bg-blue-pale text-xs uppercase text-ink3">
@@ -251,7 +265,7 @@ export default function PaymentQueuePage() {
                     <td className="px-5 py-4 font-semibold text-ink">{money(payment.amount)}</td>
                     <td className="px-5 py-4"><Badge variant={channelVariant(payment.channel)}>{formatLabel(payment.channel)}</Badge></td>
                     <td className="px-5 py-4 text-ink2">{new Date(payment.created_at ?? Date.now()).toLocaleString("en-NG")}</td>
-                    <td className="px-5 py-4"><Badge variant={statusVariant(payment.status)}>{payment.status}</Badge></td>
+                    <td className="px-5 py-4"><Badge variant={statusVariant(payment.status)}>{payment.status === "verified" ? "approved" : payment.status}</Badge></td>
                   </tr>
                 ))}
               </tbody>

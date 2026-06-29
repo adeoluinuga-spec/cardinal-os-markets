@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { FileUp } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -23,6 +24,18 @@ type ProofUpload = {
   proof_hash: string;
 };
 
+type SubmittedPayment = {
+  id: string;
+  order_id: string | null;
+  amount: number;
+  reference: string | null;
+  channel: string | null;
+  status: "pending" | "verified" | "rejected" | "assigned";
+  notes: string | null;
+  created_at: string | null;
+  verified_at: string | null;
+};
+
 function money(value: number) {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
@@ -33,6 +46,7 @@ function money(value: number) {
 
 export default function SubmitPaymentPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [payments, setPayments] = useState<SubmittedPayment[]>([]);
   const [orderId, setOrderId] = useState("");
   const [amount, setAmount] = useState("");
   const [reference, setReference] = useState("");
@@ -46,7 +60,10 @@ export default function SubmitPaymentPage() {
   useEffect(() => {
     fetch("/api/submit-payment/orders", { cache: "no-store" })
       .then((res) => res.json())
-      .then((data: { orders?: Order[] }) => setOrders(data.orders ?? []));
+      .then((data: { orders?: Order[]; payments?: SubmittedPayment[] }) => {
+        setOrders(data.orders ?? []);
+        setPayments(data.payments ?? []);
+      });
   }, []);
 
   const selectedOrder = useMemo(
@@ -148,6 +165,13 @@ export default function SubmitPaymentPage() {
     setReference("");
     setProofFile(null);
     setProofUpload(null);
+    const refreshed = await fetch("/api/submit-payment/orders", { cache: "no-store" });
+    const refreshedData = (await refreshed.json()) as {
+      orders?: Order[];
+      payments?: SubmittedPayment[];
+    };
+    setOrders(refreshedData.orders ?? []);
+    setPayments(refreshedData.payments ?? []);
   }
 
   return (
@@ -284,8 +308,80 @@ export default function SubmitPaymentPage() {
           ) : null}
         </form>
       </Card>
+
+      <Card className="overflow-hidden p-0">
+        <div className="border-b border-blue-border px-5 py-4">
+          <h2 className="font-display text-xl font-bold text-ink">
+            My submitted payments
+          </h2>
+          <p className="mt-1 text-sm text-ink2">
+            Track whether Finance has approved or rejected each proof.
+          </p>
+        </div>
+        {payments.length === 0 ? (
+          <div className="px-5 py-8 text-sm font-semibold text-ink2">
+            No payment proofs submitted yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="bg-blue-pale text-xs uppercase text-ink3">
+                <tr>
+                  <th className="px-5 py-3">Reference</th>
+                  <th className="px-5 py-3">Amount</th>
+                  <th className="px-5 py-3">Channel</th>
+                  <th className="px-5 py-3">Submitted</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Finance note</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-blue-border">
+                {payments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td className="px-5 py-4 font-mono font-semibold text-blue-primary">
+                      {payment.reference ?? "none"}
+                    </td>
+                    <td className="px-5 py-4 font-semibold text-ink">
+                      {money(Number(payment.amount ?? 0))}
+                    </td>
+                    <td className="px-5 py-4 text-ink2">
+                      {formatChannel(payment.channel)}
+                    </td>
+                    <td className="px-5 py-4 text-ink2">
+                      {payment.created_at
+                        ? new Date(payment.created_at).toLocaleString("en-NG")
+                        : "Unknown"}
+                    </td>
+                    <td className="px-5 py-4">
+                      <Badge variant={paymentStatusVariant(payment.status)}>
+                        {payment.status === "verified"
+                          ? "Approved"
+                          : payment.status}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-4 text-ink2">{payment.notes ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
     </div>
   );
+}
+
+function formatChannel(value: string | null) {
+  return (value ?? "unknown")
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function paymentStatusVariant(status: string) {
+  if (status === "verified") return "green";
+  if (status === "rejected") return "red";
+  return "gold";
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

@@ -14,6 +14,9 @@ const EDITABLE_FIELDS = [
   "ai_persona_name",
   "logo_url",
   "paystack_public_key",
+  "whatsapp_number",
+  "daily_brief_time",
+  "daily_brief_frequency",
 ] as const;
 
 const BUSINESS_TYPES = new Set([
@@ -46,6 +49,12 @@ export async function GET() {
       ai_persona_name: t.ai_persona_name,
       logo_url: t.logo_url,
       paystack_public_key: t.paystack_public_key ?? null,
+      whatsapp_number: t.whatsapp_number ?? "",
+      daily_brief_enabled: t.daily_brief_enabled ?? true,
+      daily_brief_time: t.daily_brief_time ?? "18:00",
+      daily_brief_frequency: t.daily_brief_frequency ?? "daily",
+      weekly_brief_day: t.weekly_brief_day ?? 1,
+      whatsapp_opted_in: t.whatsapp_opted_in ?? false,
       has_paystack_secret_key: Boolean(t.paystack_secret_key),
       has_paystack_webhook_secret: Boolean(t.paystack_webhook_secret),
     },
@@ -87,6 +96,29 @@ export async function PATCH(request: Request) {
       body.paystack_webhook_secret.trim()
         ? encryptTenantSecret(body.paystack_webhook_secret)
         : null;
+  }
+
+  if ("daily_brief_enabled" in body) {
+    update.daily_brief_enabled = Boolean(body.daily_brief_enabled);
+  }
+  if ("whatsapp_opted_in" in body) {
+    const optedIn = Boolean(body.whatsapp_opted_in);
+    update.whatsapp_opted_in = optedIn;
+    update.whatsapp_opted_in_at = optedIn ? new Date().toISOString() : null;
+  }
+  if ("weekly_brief_day" in body) {
+    const day = Number(body.weekly_brief_day);
+    update.weekly_brief_day = Number.isFinite(day) ? Math.min(6, Math.max(0, day)) : 1;
+  }
+
+  if (
+    update.daily_brief_frequency &&
+    !["daily", "weekly"].includes(String(update.daily_brief_frequency))
+  ) {
+    return NextResponse.json(
+      { error: "Invalid brief frequency." },
+      { status: 400 },
+    );
   }
 
   if (
