@@ -12,6 +12,8 @@ export interface TierLimits {
   max_orders_per_month: number;
   max_knowledge_entries: number;
   max_ai_queries_per_month: number;
+  max_sms_per_month: number;
+  max_autopilot_actions_per_month: number;
 
   // Feature flags
   features: {
@@ -38,7 +40,9 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     max_products: -1,
     max_orders_per_month: -1,
     max_knowledge_entries: -1,
-    max_ai_queries_per_month: -1,
+    max_ai_queries_per_month: 100,
+    max_sms_per_month: 20,
+    max_autopilot_actions_per_month: 50,
     features: {
       tasks: true,
       autopilot_inbox: true,
@@ -62,6 +66,8 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     max_orders_per_month: 1000,
     max_knowledge_entries: 20,
     max_ai_queries_per_month: 50,
+    max_sms_per_month: 100,
+    max_autopilot_actions_per_month: 0,
     features: {
       tasks: false,
       autopilot_inbox: false,
@@ -79,19 +85,21 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     },
   },
   growth: {
-    max_staff: 15,
-    max_customers: 1000,
-    max_products: 200,
-    max_orders_per_month: -1,
-    max_knowledge_entries: 100,
-    max_ai_queries_per_month: -1,
+    max_staff: 10,
+    max_customers: 750,
+    max_products: 150,
+    max_orders_per_month: 3000,
+    max_knowledge_entries: 75,
+    max_ai_queries_per_month: 500,
+    max_sms_per_month: 500,
+    max_autopilot_actions_per_month: 100,
     features: {
       tasks: true,
       autopilot_inbox: true,
       autopilot_actions: true,
       autopilot_promise: false,
       performance_tracking: true,
-      activity_log: false,
+      activity_log: true,
       sms_broadcasts: true,
       reps_view: true,
       approvals: true,
@@ -102,12 +110,14 @@ export const TIER_LIMITS: Record<SubscriptionTier, TierLimits> = {
     },
   },
   professional: {
-    max_staff: -1,
-    max_customers: -1,
-    max_products: -1,
-    max_orders_per_month: -1,
-    max_knowledge_entries: -1,
-    max_ai_queries_per_month: -1,
+    max_staff: 25,
+    max_customers: 2500,
+    max_products: 500,
+    max_orders_per_month: 10000,
+    max_knowledge_entries: 500,
+    max_ai_queries_per_month: 2000,
+    max_sms_per_month: 1500,
+    max_autopilot_actions_per_month: 1000,
     features: {
       tasks: true,
       autopilot_inbox: true,

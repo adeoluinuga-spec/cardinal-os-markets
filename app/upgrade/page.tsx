@@ -32,9 +32,9 @@ type SubscriptionInfo = {
 const TIERS: PaidTier[] = ["starter", "growth", "professional"];
 
 const PLAN_COPY: Record<PaidTier, string[]> = {
-  starter: ["Up to 5 staff", "Core modules", "1,000 orders/month"],
-  growth: ["Up to 15 staff", "All modules", "Unlimited orders", "Autopilot"],
-  professional: ["Unlimited staff", "All modules", "API access", "Priority support"],
+  starter: ["Up to 5 staff", "1,000 orders/month", "50 AI queries", "100 SMS/month"],
+  growth: ["Up to 10 staff", "3,000 orders/month", "500 AI queries", "500 SMS/month", "100 Autopilot actions"],
+  professional: ["Up to 25 staff", "10,000 orders/month", "2,000 AI queries", "1,500 SMS/month", "1,000 Autopilot actions"],
 };
 
 function naira(amount: number) {

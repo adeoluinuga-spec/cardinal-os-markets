@@ -1,9 +1,9 @@
 ﻿import Link from "next/link";
 
 export const plans = [
-  { name: "Starter", price: "₦50,000", note: "Best for small teams", features: ["Up to 3 staff", "Up to 200 customers", "Up to 100 orders/month", "Core modules included", "Email support"] },
-  { name: "Growth", price: "₦100,000", note: "Best for growing businesses", featured: true, features: ["Up to 10 staff", "Up to 1,000 customers", "Unlimited orders", "Autopilot included", "SMS Broadcasts", "Performance Tracking", "WhatsApp support"] },
-  { name: "Professional", price: "₦150,000", note: "For serious operations", features: ["Unlimited staff", "Unlimited everything", "Full Autopilot suite", "Activity Log", "Association Dashboard", "Priority support"] },
+  { name: "Starter", price: "₦50,000", note: "Best for small teams", features: ["Up to 5 staff", "200 customers", "1,000 orders/month", "50 AI queries", "100 SMS/month"] },
+  { name: "Growth", price: "₦100,000", note: "Best for growing businesses", featured: true, features: ["Up to 10 staff", "3,000 orders/month", "500 AI queries", "500 SMS/month", "100 Autopilot actions", "Activity Log"] },
+  { name: "Professional", price: "₦150,000", note: "For serious operations", features: ["Up to 25 staff", "10,000 orders/month", "2,000 AI queries", "1,500 SMS/month", "1,000 Autopilot actions", "Priority support"] },
 ];
 
 export default function PricingCards() {

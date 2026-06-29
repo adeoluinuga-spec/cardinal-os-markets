@@ -34,7 +34,7 @@ export async function aiQuotaResponse(
     return NextResponse.json(
       {
         error: "USAGE_LIMIT_REACHED",
-        message: `You have used all ${max} AI queries for this month. Upgrade to Growth or Professional for unlimited AI queries.`,
+        message: `You have used all ${max} AI queries for this month. Upgrade for higher AI limits or connect your own provider credits when available.`,
         limit: max,
         current: usage ?? 0,
         resets_on: firstOfNextMonthIso(),

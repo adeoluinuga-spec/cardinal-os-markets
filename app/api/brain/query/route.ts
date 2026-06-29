@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: "USAGE_LIMIT_REACHED",
-          message: `You have used all ${maxQueries} AI queries for this month. Upgrade to Growth or Professional for unlimited AI queries.`,
+          message: `You have used all ${maxQueries} AI queries for this month. Upgrade for higher AI limits or connect your own provider credits when available.`,
           limit: maxQueries,
           current: usage ?? 0,
           resets_on: resetsOn,

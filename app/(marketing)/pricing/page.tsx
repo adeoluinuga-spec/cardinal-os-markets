@@ -4,9 +4,9 @@ import PricingCards from "@/components/marketing/PricingCards";
 import Reveal from "@/components/marketing/Reveal";
 
 const comparison = [
-  ["Staff accounts", "3", "10", "Unlimited"], ["Customers", "200", "1,000", "Unlimited"], ["Orders/month", "100", "Unlimited", "Unlimited"], ["Products", "50", "200", "Unlimited"], ["AI queries/month", "50", "Unlimited", "Unlimited"],
+  ["Staff accounts", "5", "10", "25"], ["Customers", "200", "750", "2,500"], ["Orders/month", "1,000", "3,000", "10,000"], ["Products", "50", "150", "500"], ["AI queries/month", "50", "500", "2,000"], ["SMS/month included", "100", "500", "1,500"], ["Autopilot actions/month", "0", "100", "1,000"],
   ["War Room", true, true, true], ["Order Pipeline", true, true, true], ["Payment Verification", true, true, true], ["OTP Delivery", true, true, true], ["Company Brain", true, true, true], ["Incoming Stock", true, true, true], ["Store Pickup", true, true, true],
-  ["Tasks", false, true, true], ["Autopilot", false, true, true], ["SMS Broadcasts", false, true, true], ["Performance Tracking", false, true, true], ["Activity Log", false, false, true], ["Association Dashboard", false, false, true], ["Support", "Email", "WhatsApp", "Priority"],
+  ["Tasks", false, true, true], ["Autopilot", false, "Limited", true], ["SMS Broadcasts", false, true, true], ["Performance Tracking", false, true, true], ["Activity Log", false, true, true], ["Association Dashboard", false, false, true], ["Support", "Email", "WhatsApp", "Priority"],
 ];
 function Cell({ value }: { value: string | boolean }) { return <span className="inline-flex min-h-8 items-center justify-center">{value === true ? <Check size={17} className="text-green" strokeWidth={3} /> : value === false ? <Minus size={16} className="text-ink3" /> : value}</span>; }
 

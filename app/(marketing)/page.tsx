@@ -30,7 +30,7 @@ const faqs = [
   ["Can I accept payments from customers?", "Yes. Connect your Paystack account in Settings and your customers can pay by card or bank transfer directly from their order tracking page. Don’t have Paystack? Bank transfer always works."],
   ["Do I need a website to use Cardinal OS?", "No. Cardinal OS Markets is your complete back-office system. Orders come in from WhatsApp, walk-in, phone, or Instagram - you record them in Cardinal. No website needed."],
   ["What if I already have a website?", "For now, you record website orders manually in Cardinal. Automatic website sync is available on our Enterprise plan for businesses with high website order volume."],
-  ["Can I add my team members?", "Yes. Starter includes 3 staff accounts, Growth includes 10, and Professional includes unlimited. Each person gets a role-specific login - they only see what their job requires."],
+  ["Can I add my team members?", "Yes. Starter includes 5 staff accounts, Growth includes 10, and Professional includes 25. Each person gets a role-specific login - they only see what their job requires."],
 ];
 
 function Eyebrow({ children }: { children: React.ReactNode }) { return <p className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-blue-primary">{children}</p>; }

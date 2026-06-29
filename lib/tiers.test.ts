@@ -30,11 +30,13 @@ describe("hasFeature", () => {
 
 describe("isAtLimit", () => {
   it("treats -1 as unlimited", () => {
-    expect(isAtLimit("professional", "max_staff", 9999)).toBe(false);
+    expect(isAtLimit("trial", "max_staff", 9999)).toBe(false);
+    expect(isAtLimit("professional", "max_staff", 25)).toBe(true);
   });
   it("blocks at or above the cap", () => {
     expect(isAtLimit("starter", "max_staff", 5)).toBe(true);
     expect(isAtLimit("starter", "max_staff", 4)).toBe(false);
+    expect(isAtLimit("growth", "max_sms_per_month", 500)).toBe(true);
   });
 });
 

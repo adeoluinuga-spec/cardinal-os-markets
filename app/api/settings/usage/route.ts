@@ -18,7 +18,7 @@ export async function GET() {
   const supabase = await createServerSupabaseClient();
   const tenantId = normalizedTenant.id;
 
-  const [staff, customers, products, aiQueries, orders] = await Promise.all([
+  const [staff, customers, products, aiQueries, orders, smsMessages, autopilotActions] = await Promise.all([
     supabase
       .from("tenant_users")
       .select("id", { count: "exact", head: true })
@@ -37,6 +37,8 @@ export async function GET() {
       p_tenant_id: tenantId,
       p_metric: "orders_this_month",
     }),
+    supabase.rpc("get_usage", { p_tenant_id: tenantId, p_metric: "sms_messages" }),
+    supabase.rpc("get_usage", { p_tenant_id: tenantId, p_metric: "autopilot_actions" }),
   ]);
 
   return NextResponse.json({
@@ -48,6 +50,8 @@ export async function GET() {
       max_products: products.count ?? 0,
       max_orders_per_month: orders.data ?? 0,
       max_ai_queries_per_month: aiQueries.data ?? 0,
+      max_sms_per_month: smsMessages.data ?? 0,
+      max_autopilot_actions_per_month: autopilotActions.data ?? 0,
     },
   });
 }

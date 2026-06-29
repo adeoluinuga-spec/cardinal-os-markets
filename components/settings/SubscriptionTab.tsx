@@ -58,14 +58,33 @@ function formatDate(value: string | null) {
 
 function planBullets(tier: "starter" | "growth" | "professional") {
   if (tier === "starter") {
-    return ["Up to 5 staff", "Core modules", "1,000 orders/month"];
+    return [
+      "Up to 5 staff",
+      "200 customers and 50 products",
+      "1,000 orders/month",
+      "50 AI queries and 100 SMS/month",
+    ];
   }
 
   if (tier === "growth") {
-    return ["Up to 15 staff", "All modules", "Unlimited orders", "Autopilot"];
+    return [
+      "Up to 10 staff",
+      "750 customers and 150 products",
+      "3,000 orders/month",
+      "500 AI queries and 500 SMS/month",
+      "100 Autopilot actions/month",
+      "Activity Log included",
+    ];
   }
 
-  return ["Unlimited staff", "All modules", "API access", "Priority support"];
+  return [
+    "Up to 25 staff",
+    "2,500 customers and 500 products",
+    "10,000 orders/month",
+    "2,000 AI queries and 1,500 SMS/month",
+    "1,000 Autopilot actions/month",
+    "API access and priority support",
+  ];
 }
 
 function loadPaystackScript(): Promise<boolean> {

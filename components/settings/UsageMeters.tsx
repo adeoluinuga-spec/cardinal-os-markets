@@ -25,6 +25,8 @@ const METERS: { key: LimitKey; label: string }[] = [
   { key: "max_products", label: "Products" },
   { key: "max_orders_per_month", label: "Orders this month" },
   { key: "max_ai_queries_per_month", label: "AI queries this month" },
+  { key: "max_sms_per_month", label: "SMS this month" },
+  { key: "max_autopilot_actions_per_month", label: "Autopilot actions this month" },
 ];
 
 function Meter({
